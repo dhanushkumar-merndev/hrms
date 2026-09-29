@@ -1,0 +1,61 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+key.properties
+google-services.json
+GoogleService-Info.plist
+service-account*.json
+supabase/.temp/
+supabase/.branches/
+supabase/functions/.env
+
+# Generated app config (built from .env APP_* keys)
+build/
+/app_config.json
+
+# Local tooling (user-space Postgres/PostGIS, Deno) and test output
+.tools/
+.dart_tool/
+.pub-cache/
+.pub/
+coverage/
+test_output/
+*.log
+
+# Flutter / Dart
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.metadata.bak
+**/doc/api/
+**/ios/Flutter/.last_build_id
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/ephemeral/
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.*
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/app/debug
+**/android/app/profile
+**/android/app/release
+.kotlin/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store

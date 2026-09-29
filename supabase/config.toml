@@ -1,0 +1,49 @@
+# Supabase CLI configuration for the Internal HRMS.
+# Hosted deploys use tool/deploy.sh; the local stack (Docker) is optional —
+# DB tests run against the user-space Postgres from tool/local_db.sh.
+project_id = "hrms"
+
+[api]
+enabled = true
+port = 54321
+# Only `public` (RPC functions) is exposed. Tables live in the unexposed
+# `hrms` schema.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[auth]
+enabled = true
+site_url = "http://localhost"
+# Accounts are provisioned by Admin/HR only.
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 12
+
+[auth.email]
+enable_signup = false
+double_confirm_changes = true
+enable_confirmations = false
+secure_password_change = false
+
+# Every function verifies the caller itself (user JWT or maintenance secret).
+[functions.auth-login]
+verify_jwt = false
+[functions.auth-password]
+verify_jwt = false
+[functions.auth-reauth]
+verify_jwt = false
+[functions.admin-users]
+verify_jwt = false
+[functions.device-register]
+verify_jwt = false
+[functions.punch]
+verify_jwt = false
+[functions.files]
+verify_jwt = false
+[functions.maintenance]
+verify_jwt = false
