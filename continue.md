@@ -16,7 +16,36 @@ Version 1.1 · 29 September 2026.
 - [ ] Native Android/iOS builds or deployments produced.
 - [ ] Physical-device GPS/security/notification validation completed.
 
-**Status: specification complete; software implementation has not started.** No claims of test execution or provider setup.
+**Status (2026-09-30, in progress): backend deployed to staging Supabase; Flutter app partially built.** See "Implementation status" below.
+
+## Implementation status (2026-09-29)
+
+Owner decisions this session (controlling): internal distribution only (no Play/App Store) → Play Integrity and App Attest replaced by **Android Key Attestation** (hardware key verified against Google roots) + **biometric-bound punch key** (org setting `require_biometric_punch`, default on; server verifies via attestation). iOS punching deferred (needs Mac/Apple account). Holiday API import (Calendarific) dropped. Owner asked (2026-09-30) for automatic holiday *suggestions*: planned monthly pg_cron → Edge job reading Google's public "Holidays in India" ICS feed (no key), stored as suggestions the Admin publishes; never auto-published.
+
+Environment: Flutter 3.47.5 / Dart 3.13.4, Android SDK 36, JBR 25 (Android Studio). No Docker → DB tests run on user-space Postgres 17 + PostGIS 3.6 (`tool/local_db.sh`, micromamba in `.tools/`). Deno 2.9.7 in `.tools/bin`. Supabase CLI 2.118.0 via npx. Test phones: OPPO CPH2757 (Android 16, `616bef82`), Realme RMX2161.
+
+Done and verified:
+- `.env.example` (trimmed per owner), `tool/gen_app_config.dart` (only public keys reach the app; refuses secret keys).
+- 14 migrations in `supabase/migrations/` (identity/gates, scheduling + hours engine, attendance/punch, leave ledger + request/approval state machine, files/payslips, admin config, people/reports/notifications/audit, maintenance + pg_cron, bootstrap). Tables in unexposed `hrms` schema, deny-all RLS, all access via `public.*` definer RPCs with `hrms.current_actor()` gate; `internal_*` service-role only.
+- DB tests: `tool/db_test.sh` → 5 suites, 253 assertions PASS (grants, TIME-001..018, LOC/PUNCH, LEAVE/REVIEW/CORR, AUTH/ROLE/EMP).
+- Edge Functions (8) deployed: auth-login, auth-password, auth-reauth, admin-users, device-register, punch, files, maintenance. Deno unit tests: 13 PASS (`.tools/bin/deno test -A supabase/functions/tests/`).
+- Deployed to staging project via `tool/deploy.sh`; first Admin created with `dart run tool/bootstrap_admin.dart` (ADMIN001, temporary password shown once). Live E2E: login → restricted session → PASSWORD_CHANGE_REQUIRED verified.
+- Flutter: core (API client, secure session storage, session state machine, theme tokens, widgets, router/shell), screens: login, password change, home, action, explore, punch (+ Kotlin `DeviceKeyChannel` for attested biometric key), attendance list/day/correction, my requests + detail, file viewer, leave balances/history, holidays. `flutter analyze` clean at last check; Dart payload hash matches server (test/unit).
+- Routes registered (attendance, attendance/day, corrections/new, requests, requests/:id, leave, leave/apply, holidays) and leave apply screen (S12) written; `flutter analyze` clean.
+- Release APK (61.3 MB) installed on OPPO CPH2757 (`adb install -r` → Success, 2026-09-30). On-device launch/screenshot not yet captured by the agent.
+
+Owner action items:
+- Supabase dashboard: Authentication → turn OFF "Allow new users to sign up"; Email → minimum password length 12 (token lacks `project_admin_write`).
+- Reset the database password (it was printed once by an npm notice; deploy script now redacts) and update `SUPABASE_DB_URL`.
+- Optional: Firebase keys for push; release keystore for signed APKs.
+
+Next exact steps:
+1. On phone: sign in ADMIN001, change password; confirm startup/home render (screenshot evidence).
+2. Build admin setup screens needed for punching: offices S31 (use current location), shifts S30 (publish draft), employee office/shift assignment. Then test real check-in/out on phone.
+3. Holiday suggestions: Edge function + pg_cron monthly fetch of Google public India holiday ICS → `holiday_suggestions`; Admin reviews and publishes in holidays admin.
+4. Remaining screens: approvals queue/detail (S22/S23), payslips + payroll uploads (S14/S15/S28), documents (S18), profile/people (S16/S17), notifications/settings (S19/S20), workspace/reports (S21/S24), employees list/detail/new (S25–S27), admin teams/leave-policies/permissions/org/audit (S29, S32, S33, S36, S37), announcements (S38).
+5. M7/M8 annual export + cleanup (SQL + Edge + client ZIP) — not started.
+6. Push (FCM) client registration; widget/integration tests.
 
 ## Read order and first action
 
@@ -201,6 +230,7 @@ Fill with actual evidence after implementation, never inferred success.
 | --- | --- | --- | --- | --- | --- |
 | 2026-09-29 / specification | Not an app build | Document/archive validation only | Specifications and original UI references packaged | All software/provider tasks pending | Inspect target repo and execute M0 |
 | 2026-09-29 / v1.1 review | Not an app build | Cross-document review and ZIP checks | R01–R11 corrected; 191 QA scenarios specified (31 new); app tests not executed | Native/API implementation and validation still pending | Read review register, then execute M0 |
+| 2026-09-30 / M1–M5 partial | Release APK (uncommitted working tree) | `tool/db_test.sh`; `deno test`; `tool/deploy.sh`; `flutter analyze`; `adb -s 616bef82 install -r` | 253 DB assertions PASS; 13 Deno PASS; live login E2E PASS; APK installed on OPPO | Punch untestable until office/shift admin screens exist; many screens pending | Build S30/S31 + assignment, then punch on phone |
 
 For a blocked item record: required credential/tool/device, code already completed, exact validation still needed, how to resume safely, and owner action. Do not include credential values. For a bug record minimal reproduction and affected test IDs, not just 'not working'.
 
