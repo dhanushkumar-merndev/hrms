@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/widgets/app_icon.dart';
 import '../core/widgets/jelly_nav_bar.dart';
 import 'theme.dart';
 
@@ -30,18 +31,18 @@ class AppShell extends StatelessWidget {
         onDestinationSelected: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
         destinations: const [
           JellyNavDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded, color: AppColors.primary),
+            icon: AppIcon(Icons.home_outlined),
+            selectedIcon: AppIcon(Icons.home_rounded, color: AppColors.primary),
             label: 'Home',
           ),
           JellyNavDestination(
-            icon: Icon(Icons.bolt_outlined),
-            selectedIcon: Icon(Icons.bolt_rounded, color: AppColors.primary),
+            icon: AppIcon(Icons.bolt_outlined),
+            selectedIcon: AppIcon(Icons.bolt_rounded, color: AppColors.primary),
             label: 'Action',
           ),
           JellyNavDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view_rounded, color: AppColors.primary),
+            icon: AppIcon(Icons.grid_view_outlined),
+            selectedIcon: AppIcon(Icons.grid_view_rounded, color: AppColors.primary),
             label: 'Explore',
           ),
         ],
@@ -129,7 +130,7 @@ class NotAvailableScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.xl),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.construction_rounded, size: 44, color: AppColors.textSecondary),
+            const AppIcon(Icons.construction_rounded, size: 44, color: AppColors.textSecondary),
             const SizedBox(height: AppSpacing.md),
             Text('Coming in the next build', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.sm),

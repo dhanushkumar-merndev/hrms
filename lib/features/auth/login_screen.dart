@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/illustration.dart';
 
 /// S01 — Employee ID + password. No signup, OTP or email recovery.
@@ -83,7 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     autofillHints: const [AutofillHints.username],
                     inputFormatters: [LengthLimitingTextInputFormatter(32)],
                     decoration: const InputDecoration(labelText: 'Employee ID', hintText: 'e.g. EMP001',
-                        prefixIcon: Icon(Icons.badge_outlined)),
+                        prefixIcon: AppIcon(Icons.badge_outlined)),
                     validator: (v) {
                       final code = (v ?? '').trim().toUpperCase();
                       if (code.isEmpty) return 'Enter your employee ID';
@@ -103,10 +104,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onFieldSubmitted: (_) => _busy ? null : _submit(),
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: const Icon(Icons.lock_outline_rounded),
+                      prefixIcon: const AppIcon(Icons.lock_outline_rounded),
                       suffixIcon: IconButton(
                         tooltip: _obscure ? 'Show password' : 'Hide password',
-                        icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                        icon: AppIcon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
@@ -150,7 +151,7 @@ class _Banner extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(12)),
         child: Row(children: [
-          Icon(Icons.info_outline_rounded, color: tone, size: 20),
+          AppIcon(Icons.info_outline_rounded, color: tone, size: 20),
           const SizedBox(width: AppSpacing.sm),
           Expanded(child: Text(text, style: TextStyle(color: tone, fontSize: 15))),
         ]),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/widgets/app_icon.dart';
 import '../core/widgets/slide_page_transition.dart';
 
 /// Design tokens from design.md §2 (approximations of the references with
@@ -186,6 +187,11 @@ ThemeData buildTheme() {
     dividerTheme: const DividerThemeData(color: AppColors.border, space: 1),
     // Screens slide in from the right to left on push, and back out to the
     // right on pop, with smooth parallax and shadow on all platforms.
+    // App-bar back and close buttons use the app's own SVG icons.
+    actionIconTheme: ActionIconThemeData(
+      backButtonIconBuilder: (_) => const AppIcon(Icons.arrow_back),
+      closeButtonIconBuilder: (_) => const AppIcon(Icons.close_rounded),
+    ),
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
       TargetPlatform.android: SlideRightLeftPageTransitionsBuilder(),
       TargetPlatform.iOS: SlideRightLeftPageTransitionsBuilder(),

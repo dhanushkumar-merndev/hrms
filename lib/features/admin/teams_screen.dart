@@ -5,6 +5,7 @@ import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -82,6 +83,7 @@ class _TeamsScreenState extends ConsumerState<TeamsScreen> {
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(controller: name, autofocus: true, maxLength: 80, decoration: const InputDecoration(labelText: 'Name')),
             DropdownButtonFormField<String?>(
+              icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
               initialValue: dept,
               decoration: const InputDecoration(labelText: 'Department'),
               items: [
@@ -172,7 +174,7 @@ class _TeamsScreenState extends ConsumerState<TeamsScreen> {
                   Expanded(child: Text('Teams', style: Theme.of(context).textTheme.titleMedium)),
                   TextButton.icon(
                     onPressed: _busy ? null : () => _editTeam(null, departments),
-                    icon: const Icon(Icons.add_rounded),
+                    icon: const AppIcon(Icons.add_rounded),
                     label: const Text('Team'),
                   ),
                 ]),
@@ -191,14 +193,14 @@ class _TeamsScreenState extends ConsumerState<TeamsScreen> {
                           IconButton(
                             tooltip: 'Edit team',
                             onPressed: _busy ? null : () => _editTeam(t, departments),
-                            icon: const Icon(Icons.edit_outlined),
+                            icon: const AppIcon(Icons.edit_outlined),
                           ),
                         ]),
                         Text('${deptName(t['department_id'] as String?)} · ${t['member_count']} member(s)',
                             style: Theme.of(context).textTheme.bodyMedium),
                         const SizedBox(height: AppSpacing.xs),
                         Row(children: [
-                          const Icon(Icons.supervisor_account_outlined, size: 18, color: AppColors.textSecondary),
+                          const AppIcon(Icons.supervisor_account_outlined, size: 18, color: AppColors.textSecondary),
                           const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: Text(t['manager'] == null
@@ -220,7 +222,7 @@ class _TeamsScreenState extends ConsumerState<TeamsScreen> {
                   Expanded(child: Text('Departments', style: Theme.of(context).textTheme.titleMedium)),
                   TextButton.icon(
                     onPressed: _busy ? null : () => _editDepartment(null),
-                    icon: const Icon(Icons.add_rounded),
+                    icon: const AppIcon(Icons.add_rounded),
                     label: const Text('Department'),
                   ),
                 ]),
@@ -230,7 +232,7 @@ class _TeamsScreenState extends ConsumerState<TeamsScreen> {
                     child: ListTile(
                       title: Text(dep['name'] as String),
                       subtitle: dep['active'] == true ? null : const Text('Inactive'),
-                      trailing: const Icon(Icons.edit_outlined),
+                      trailing: const AppIcon(Icons.edit_outlined),
                       onTap: _busy ? null : () => _editDepartment(dep),
                     ),
                   ),

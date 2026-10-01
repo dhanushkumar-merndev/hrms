@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/states.dart';
 import '../home/home_providers.dart';
@@ -51,13 +52,13 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       appBar: AppBar(title: const Text('Attendance'), actions: [
         IconButton(
           tooltip: _calendar ? 'Show list' : 'Show calendar',
-          icon: Icon(_calendar ? Icons.view_list_rounded : Icons.calendar_month_rounded),
+          icon: AppIcon(_calendar ? Icons.view_list_rounded : Icons.calendar_month_rounded),
           onPressed: () => setState(() => _calendar = !_calendar),
         ),
       ]),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/corrections/new'),
-        icon: const Icon(Icons.edit_calendar_outlined),
+        icon: const AppIcon(Icons.edit_calendar_outlined),
         label: const Text('Fix a punch'),
       ),
       body: Column(children: [
@@ -132,7 +133,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
+                                    AppIcon(
                                       _showUpcoming ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                                       size: 18,
                                       color: AppColors.primary,
@@ -191,13 +192,13 @@ class _MonthBar extends StatelessWidget {
         IconButton(
           tooltip: 'Previous month',
           onPressed: () => onChange(DateTime(month.year, month.month - 1)),
-          icon: const Icon(Icons.chevron_left_rounded, size: 22),
+          icon: const AppIcon(Icons.chevron_left_rounded, size: 22),
         ),
         Expanded(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.primary),
+              const AppIcon(Icons.calendar_today_rounded, size: 16, color: AppColors.primary),
               const SizedBox(width: 8),
               Text(
                 DateFormat('MMMM yyyy').format(month),
@@ -224,7 +225,7 @@ class _MonthBar extends StatelessWidget {
         IconButton(
           tooltip: 'Next month',
           onPressed: canNext ? () => onChange(DateTime(month.year, month.month + 1)) : null,
-          icon: const Icon(Icons.chevron_right_rounded, size: 22),
+          icon: const AppIcon(Icons.chevron_right_rounded, size: 22),
         ),
       ]),
     );
@@ -269,7 +270,7 @@ class _Totals extends StatelessWidget {
                     label,
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
                   ),
-                  Icon(icon, size: 16, color: iconColor),
+                  AppIcon(icon, size: 16, color: iconColor),
                 ],
               ),
               const SizedBox(height: 6),
@@ -361,14 +362,7 @@ class _Totals extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: AppColors.success,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
+                      AppIcon(Icons.circle, size: 10, color: AppColors.success),
                       const SizedBox(width: 8),
                       const Text(
                         'Monthly Attendance',
@@ -431,7 +425,7 @@ class _Totals extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline_rounded, size: 15, color: AppColors.textSecondary),
+              const AppIcon(Icons.info_outline_rounded, size: 15, color: AppColors.textSecondary),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -529,7 +523,7 @@ class _DayRow extends StatelessWidget {
                 if (hasPunch)
                   Row(
                     children: [
-                      const Icon(Icons.schedule_rounded, size: 13, color: AppColors.textSecondary),
+                      const AppIcon(Icons.schedule_rounded, size: 13, color: AppColors.textSecondary),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -544,7 +538,7 @@ class _DayRow extends StatelessWidget {
                 else if (r['is_required'] == true)
                   Row(
                     children: [
-                      const Icon(Icons.schedule_rounded, size: 13, color: AppColors.textSecondary),
+                      const AppIcon(Icons.schedule_rounded, size: 13, color: AppColors.textSecondary),
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
@@ -567,7 +561,7 @@ class _DayRow extends StatelessWidget {
                     Text('-${OrgTime.hm(r['shortfall_seconds'])}', style: const TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w600)),
                 ]),
               ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFFB0B9C6), size: 20),
+            const AppIcon(Icons.chevron_right_rounded, color: Color(0xFFB0B9C6), size: 20),
           ]),
         ),
       ),
@@ -648,7 +642,7 @@ class _CalendarCell extends StatelessWidget {
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Text('$day', style: const TextStyle(fontSize: 15)),
           const SizedBox(height: 4),
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: r == null ? Colors.transparent : color, shape: BoxShape.circle)),
+          AppIcon(Icons.circle, size: 10, color: r == null ? Colors.transparent : color),
         ]),
       ),
     );
@@ -663,7 +657,7 @@ class _Legend extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      AppIcon(Icons.circle, size: 10, color: color),
       const SizedBox(width: 4),
       Text(label, style: Theme.of(context).textTheme.bodySmall),
     ]);

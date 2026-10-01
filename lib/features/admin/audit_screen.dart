@@ -1,3 +1,4 @@
+import '../../core/widgets/app_icon.dart';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -67,7 +68,7 @@ class _AuditScreenState extends ConsumerState<AuditScreen> {
               ),
               const SizedBox(width: AppSpacing.sm),
               InputChip(
-                avatar: const Icon(Icons.date_range_rounded, size: 18),
+                avatar: const AppIcon(Icons.date_range_rounded, size: 18),
                 label: Text(_range == null
                     ? 'Any date'
                     : '${OrgTime.ymd(_range!.start)} – ${OrgTime.ymd(_range!.end)}'),
@@ -81,7 +82,7 @@ class _AuditScreenState extends ConsumerState<AuditScreen> {
               ),
               const SizedBox(width: AppSpacing.sm),
               InputChip(
-                avatar: const Icon(Icons.person_outline_rounded, size: 18),
+                avatar: const AppIcon(Icons.person_outline_rounded, size: 18),
                 label: Text(_actor == null ? 'Any actor' : 'By ${_actor!['name']}'),
                 onPressed: () async {
                   final p = await pickEmployee(context, title: 'Actor', status: 'all');
@@ -91,7 +92,7 @@ class _AuditScreenState extends ConsumerState<AuditScreen> {
               ),
               const SizedBox(width: AppSpacing.sm),
               InputChip(
-                avatar: const Icon(Icons.badge_outlined, size: 18),
+                avatar: const AppIcon(Icons.badge_outlined, size: 18),
                 label: Text(_target == null ? 'Any employee' : 'About ${_target!['name']}'),
                 onPressed: () async {
                   final p = await pickEmployee(context, title: 'About employee', status: 'all');

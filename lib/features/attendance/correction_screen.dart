@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../home/home_providers.dart';
@@ -162,10 +163,10 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.event_outlined),
+                    leading: const AppIcon(Icons.event_outlined),
                     title: const Text('Shift date'),
                     subtitle: Text(OrgTime.date(OrgTime.ymd(_date))),
-                    trailing: const Icon(Icons.edit_outlined),
+                    trailing: const AppIcon(Icons.edit_outlined),
                     onTap: widget.editRequestId == null ? _pickDate : null,
                   ),
                   if (d != null && d['scheduled'] == true)
@@ -187,7 +188,7 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
                 SectionCard(
                   color: AppColors.warningSoft,
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Icon(Icons.info_outline_rounded, color: AppColors.warning),
+                    const AppIcon(Icons.info_outline_rounded, color: AppColors.warning),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Text(
@@ -267,7 +268,7 @@ class _TimeField extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: InputDecorator(
-        decoration: InputDecoration(labelText: label, errorText: error, suffixIcon: const Icon(Icons.schedule_rounded)),
+        decoration: InputDecoration(labelText: label, errorText: error, suffixIcon: const AppIcon(Icons.schedule_rounded)),
         child: Text(value ?? 'Choose time', style: TextStyle(color: value == null ? AppColors.textSecondary : AppColors.text)),
       ),
     );

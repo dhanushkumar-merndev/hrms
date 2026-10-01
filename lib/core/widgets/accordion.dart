@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import 'app_icon.dart';
 
 /// Collapsible card: tinted icon, title, one-line summary while closed,
 /// rotating chevron. The body is built only while open (so sections that
@@ -52,7 +53,7 @@ class AccordionSection extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(12)),
-                      child: Icon(icon, size: 22, color: iconColor),
+                      child: AppIcon(icon, size: 22, color: iconColor),
                     ),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
@@ -81,7 +82,7 @@ class AccordionSection extends StatelessWidget {
                       curve: Curves.easeOutCubic,
                       child: const Padding(
                         padding: EdgeInsets.all(8),
-                        child: Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
+                        child: AppIcon(Icons.keyboard_arrow_down_rounded, color: AppColors.textSecondary),
                       ),
                     ),
                   ],

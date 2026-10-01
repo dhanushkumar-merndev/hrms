@@ -5,6 +5,7 @@ import 'package:pdfx/pdfx.dart';
 
 import '../../app/theme.dart';
 import '../../core/api/api_exception.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/states.dart';
 import 'file_service.dart';
@@ -86,7 +87,7 @@ class _FileViewerScreenState extends ConsumerState<FileViewerScreen> {
     final f = _file;
     return Scaffold(
       appBar: AppBar(title: Text(widget.title), actions: [
-        if (f != null) IconButton(tooltip: 'Save a copy', onPressed: _save, icon: const Icon(Icons.download_rounded)),
+        if (f != null) IconButton(tooltip: 'Save a copy', onPressed: _save, icon: const AppIcon(Icons.download_rounded)),
       ]),
       body: _error != null
           ? (_error is ApiException && (_error as ApiException).code == 'ARCHIVED'

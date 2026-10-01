@@ -5,6 +5,7 @@ import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/states.dart';
 import '../files/file_viewer_screen.dart';
@@ -91,7 +92,7 @@ class _SlotTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(color: AppColors.salaryCard, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: AppColors.salaryAction),
+              child: AppIcon(icon, color: AppColors.salaryAction),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
@@ -106,7 +107,7 @@ class _SlotTile extends StatelessWidget {
                   Text('Published ${OrgTime.dateTime(s['published_at'])}', style: Theme.of(context).textTheme.bodySmall),
               ]),
             ),
-            if (id != null) const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+            if (id != null) const AppIcon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
           ]),
         ),
       ),

@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -25,7 +26,8 @@ class ApprovalDetailScreen extends ConsumerStatefulWidget {
   final String id;
 
   @override
-  ConsumerState<ApprovalDetailScreen> createState() => _ApprovalDetailScreenState();
+  ConsumerState<ApprovalDetailScreen> createState() =>
+      _ApprovalDetailScreenState();
 }
 
 class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
@@ -46,7 +48,10 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
       _busy = true;
     });
     try {
-      final res = await ref.read(apiProvider).rpc('open_request_for_review', {'p_request_id': widget.id, 'p_reason': reason});
+      final res = await ref.read(apiProvider).rpc('open_request_for_review', {
+        'p_request_id': widget.id,
+        'p_reason': reason,
+      });
       if (!mounted) return;
       setState(() {
         _res = res;
@@ -55,7 +60,8 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        if (e.code == 'VALIDATION_FAILED' && e.fieldErrors.containsKey('reason')) {
+        if (e.code == 'VALIDATION_FAILED' &&
+            e.fieldErrors.containsKey('reason')) {
           _needsFallbackReason = true;
         } else {
           _error = e;
@@ -66,7 +72,10 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
     }
   }
 
-  Future<void> _act(String done, Future<ApiResult> Function(ApiClient api) call) async {
+  Future<void> _act(
+    String done,
+    Future<ApiResult> Function(ApiClient api) call,
+  ) async {
     setState(() => _busy = true);
     try {
       await call(ref.read(apiProvider));
@@ -77,21 +86,37 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       showMessage(context, e.message, error: true);
-      if (e.code == 'STALE_VERSION' || e.code == 'REQUEST_LOCKED') await _open(null);
+      if (e.code == 'STALE_VERSION' || e.code == 'REQUEST_LOCKED')
+        await _open(null);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _decide(String decision, int? version, {required bool reasonRequired, required String title}) async {
-    final reason = await askReason(context,
-        title: title,
-        optional: !reasonRequired,
-        confirmLabel: switch (decision) { 'approve' => 'Approve', 'reject' => 'Not approve', _ => 'Return' },
-        destructive: decision == 'reject');
+  Future<void> _decide(
+    String decision,
+    int? version, {
+    required bool reasonRequired,
+    required String title,
+  }) async {
+    final reason = await askReason(
+      context,
+      title: title,
+      optional: !reasonRequired,
+      confirmLabel: switch (decision) {
+        'approve' => 'Approve',
+        'reject' => 'Not approve',
+        _ => 'Return',
+      },
+      destructive: decision == 'reject',
+    );
     if (reason == null) return;
     await _act(
-      switch (decision) { 'approve' => 'Approved.', 'reject' => 'Marked not approved.', _ => 'Returned for changes.' },
+      switch (decision) {
+        'approve' => 'Approved.',
+        'reject' => 'Marked not approved.',
+        _ => 'Returned for changes.',
+      },
       (api) => api.rpc('decide_request', {
         'p_request_id': widget.id,
         'p_decision': decision,
@@ -101,31 +126,53 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
     );
   }
 
-  Future<void> _resolve(String fn, bool accept, int? version, {required bool reasonRequired}) async {
-    final reason = await askReason(context,
-        title: accept ? 'Accept?' : 'Decline?',
-        optional: !reasonRequired,
-        confirmLabel: accept ? 'Accept' : 'Decline');
+  Future<void> _resolve(
+    String fn,
+    bool accept,
+    int? version, {
+    required bool reasonRequired,
+  }) async {
+    final reason = await askReason(
+      context,
+      title: accept ? 'Accept?' : 'Decline?',
+      optional: !reasonRequired,
+      confirmLabel: accept ? 'Accept' : 'Decline',
+    );
     if (reason == null) return;
-    await _act(accept ? 'Accepted.' : 'Declined.', (api) => api.rpc(fn, {
-          'p_request_id': widget.id,
-          'p_accept': accept,
-          'p_reason': reason.isEmpty ? null : reason,
-          'p_expected_version': version,
-        }));
+    await _act(
+      accept ? 'Accepted.' : 'Declined.',
+      (api) => api.rpc(fn, {
+        'p_request_id': widget.id,
+        'p_accept': accept,
+        'p_reason': reason.isEmpty ? null : reason,
+        'p_expected_version': version,
+      }),
+    );
   }
 
   Future<void> _reassign(int? version, String employeeId) async {
-    final who = await pickEmployee(context, title: 'Assign to approver', source: 'reviewers', excludeId: employeeId);
+    final who = await pickEmployee(
+      context,
+      title: 'Assign to approver',
+      source: 'reviewers',
+      excludeId: employeeId,
+    );
     if (who == null || !mounted) return;
-    final reason = await askReason(context, title: 'Reassign to ${who['name']}?', confirmLabel: 'Reassign');
+    final reason = await askReason(
+      context,
+      title: 'Reassign to ${who['name']}?',
+      confirmLabel: 'Reassign',
+    );
     if (reason == null) return;
-    await _act('Reassigned.', (api) => api.rpc('reassign_request', {
-          'p_request_id': widget.id,
-          'p_new_reviewer_id': who['id'],
-          'p_reason': reason,
-          'p_expected_version': version,
-        }));
+    await _act(
+      'Reassigned.',
+      (api) => api.rpc('reassign_request', {
+        'p_request_id': widget.id,
+        'p_new_reviewer_id': who['id'],
+        'p_reason': reason,
+        'p_expected_version': version,
+      }),
+    );
   }
 
   @override
@@ -138,10 +185,10 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
         child: _needsFallbackReason
             ? _FallbackPrompt(busy: _busy, onReason: _open)
             : _error != null
-                ? ErrorState(error: _error!, onRetry: () => _open(null))
-                : _res == null
-                    ? const SkeletonList(items: 3, height: 120)
-                    : _body(context, _res!, isAdmin),
+            ? ErrorState(error: _error!, onRetry: () => _open(null))
+            : _res == null
+            ? const SkeletonList(items: 3, height: 120)
+            : _body(context, _res!, isAdmin),
       ),
     );
   }
@@ -154,103 +201,184 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
     final (label, tone) = requestState(state);
     final employee = (r['employee'] as Map).cast<String, dynamic>();
     final revisions = ((r['revisions'] as List?) ?? const []).cast<Map>();
-    final current = revisions.isEmpty ? <String, dynamic>{} : (revisions.last['payload'] as Map).cast<String, dynamic>();
+    final current = revisions.isEmpty
+        ? <String, dynamic>{}
+        : (revisions.last['payload'] as Map).cast<String, dynamic>();
     final events = ((r['events'] as List?) ?? const []).cast<Map>();
     final balance = ((r['balance'] as List?) ?? const []).cast<Map>();
     final conflicts = (r['attendance_conflicts'] as num?)?.toInt() ?? 0;
     final adminFallback = r['authority'] == 'admin';
     final attachment = current['attachment_file_version_id'] as String?;
 
-    return ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
-      SectionCard(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('${employee['name']} · ${employee['code']}', style: Theme.of(context).textTheme.titleMedium),
-          Text('${requestTitle(r)} · ${requestDates(r)}', style: Theme.of(context).textTheme.bodyLarge),
-          const SizedBox(height: AppSpacing.sm),
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            StatusChip(label, tone: tone),
-            if (r['edited'] == true) StatusChip('Edited · version ${r['current_revision']}', tone: ChipTone.neutral),
-            if (adminFallback) const StatusChip('Admin fallback', tone: ChipTone.warning),
-          ]),
-          const SizedBox(height: AppSpacing.sm),
-          Row(children: [
-            const Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.textSecondary),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: Text(
-                'You are reviewing version ${r['locked_revision'] ?? r['current_revision']}. '
-                'The employee can no longer edit it; return it if changes are needed.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-          ]),
-        ]),
-      ),
-      if (kind == 'leave') ...[
-        const SizedBox(height: AppSpacing.lg),
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.page),
+      children: [
         SectionCard(
-          color: conflicts > 0 ? AppColors.errorSoft : AppColors.leaveCard,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Balance impact', style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: AppSpacing.xs),
-            Text('This request: ${unitsLabel(r['units'] as num?)}'
-                '${(current['days'] as List?)?.isEmpty ?? true ? '' : ' (holidays and weekly offs excluded)'}'),
-            for (final b in balance)
-              Text('Leave year ${b['leave_year']}: ${daysFromUnits(b['available'] as num?)} days available after holds'),
-            if (balance.isEmpty) const Text('No balance is allocated for this leave type.'),
-            if (conflicts > 0) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Text('Attendance was recorded on $conflicts of these day(s). Approving is blocked; return it instead.',
-                  style: const TextStyle(color: AppColors.error)),
-            ],
-          ]),
-        ),
-      ],
-      const SizedBox(height: AppSpacing.lg),
-      SectionCard(
-        child: RevisionView(
-          kind: kind,
-          payload: current,
-          onViewAttachment: attachment == null
-              ? null
-              : () => openProtectedFile(context, attachment, 'Attachment', purpose: 'review'),
-        ),
-      ),
-      if (kind == 'correction') ...[
-        const SizedBox(height: AppSpacing.sm),
-        OutlinedButton.icon(
-          onPressed: () => context.push('/attendance/day?date=${r['target_shift_date']}&employee=${employee['id']}'),
-          icon: const Icon(Icons.event_note_outlined),
-          label: const Text('View recorded attendance for this day'),
-        ),
-      ],
-      if (revisions.length > 1) ...[
-        const SizedBox(height: AppSpacing.lg),
-        SectionCard(
-          child: ExpansionTile(
-            tilePadding: EdgeInsets.zero,
-            title: Text('Earlier versions (${revisions.length - 1})', style: Theme.of(context).textTheme.titleSmall),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              for (final rv in revisions.reversed.skip(1))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Version ${rv['revision_no']}', style: Theme.of(context).textTheme.bodySmall),
-                    RevisionView(kind: kind, payload: (rv['payload'] as Map).cast<String, dynamic>()),
-                  ]),
-                ),
+              Text(
+                '${employee['name']} · ${employee['code']}',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Text(
+                '${requestTitle(r)} · ${requestDates(r)}',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  StatusChip(label, tone: tone),
+                  if (r['edited'] == true)
+                    StatusChip(
+                      'Edited · version ${r['current_revision']}',
+                      tone: ChipTone.neutral,
+                    ),
+                  if (adminFallback)
+                    const StatusChip('Admin fallback', tone: ChipTone.warning),
+                  if (kind == 'bank_details' && current['mode'] == 'change')
+                    const StatusChip(
+                      'Admin approval required',
+                      tone: ChipTone.warning,
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  const AppIcon(
+                    Icons.lock_outline_rounded,
+                    size: 18,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      'You are reviewing version ${r['locked_revision'] ?? r['current_revision']}. '
+                      'The employee can no longer edit it; return it if changes are needed.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
+        if (kind == 'leave') ...[
+          const SizedBox(height: AppSpacing.lg),
+          SectionCard(
+            color: conflicts > 0 ? AppColors.errorSoft : AppColors.leaveCard,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Balance impact',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'This request: ${unitsLabel(r['units'] as num?)}'
+                  '${(current['days'] as List?)?.isEmpty ?? true ? '' : ' (holidays and weekly offs excluded)'}',
+                ),
+                for (final b in balance)
+                  Text(
+                    'Leave year ${b['leave_year']}: ${daysFromUnits(b['available'] as num?)} days available after holds',
+                  ),
+                if (balance.isEmpty)
+                  const Text('No balance is allocated for this leave type.'),
+                if (conflicts > 0) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Attendance was recorded on $conflicts of these day(s). Approving is blocked; return it instead.',
+                    style: const TextStyle(color: AppColors.error),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        SectionCard(
+          child: RevisionView(
+            kind: kind,
+            payload: current,
+            onViewAttachment: attachment == null
+                ? null
+                : () => openProtectedFile(
+                    context,
+                    attachment,
+                    'Attachment',
+                    purpose: 'review',
+                  ),
+          ),
+        ),
+        if (kind == 'correction') ...[
+          const SizedBox(height: AppSpacing.sm),
+          OutlinedButton.icon(
+            onPressed: () => context.push(
+              '/attendance/day?date=${r['target_shift_date']}&employee=${employee['id']}',
+            ),
+            icon: const AppIcon(Icons.event_note_outlined),
+            label: const Text('View recorded attendance for this day'),
+          ),
+        ],
+        if (revisions.length > 1) ...[
+          const SizedBox(height: AppSpacing.lg),
+          SectionCard(
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              title: Text(
+                'Earlier versions (${revisions.length - 1})',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              children: [
+                for (final rv in revisions.reversed.skip(1))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Version ${rv['revision_no']}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        RevisionView(
+                          kind: kind,
+                          payload: (rv['payload'] as Map)
+                              .cast<String, dynamic>(),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        SectionCard(child: EventTimeline(events: events)),
+        const SizedBox(height: AppSpacing.xl),
+        ..._actions(
+          state,
+          version,
+          adminFallback,
+          employee['id'] as String,
+          isAdmin,
+          conflicts,
+        ),
       ],
-      const SizedBox(height: AppSpacing.lg),
-      SectionCard(child: EventTimeline(events: events)),
-      const SizedBox(height: AppSpacing.xl),
-      ..._actions(state, version, adminFallback, employee['id'] as String, isAdmin, conflicts),
-    ]);
+    );
   }
 
-  List<Widget> _actions(String state, int? version, bool adminFallback, String employeeId, bool isAdmin, int conflicts) {
+  List<Widget> _actions(
+    String state,
+    int? version,
+    bool adminFallback,
+    String employeeId,
+    bool isAdmin,
+    int conflicts,
+  ) {
     final gap = const SizedBox(height: AppSpacing.sm);
     final out = <Widget>[];
     if (state == 'under_review') {
@@ -258,62 +386,125 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
         FilledButton.icon(
           onPressed: _busy || conflicts > 0
               ? null
-              : () => _decide('approve', version, reasonRequired: adminFallback, title: 'Approve this request?'),
-          icon: const Icon(Icons.check_rounded),
+              : () => _decide(
+                  'approve',
+                  version,
+                  reasonRequired: adminFallback,
+                  title: 'Approve this request?',
+                ),
+          icon: const AppIcon(Icons.check_rounded),
           label: const Text('Approve'),
         ),
         gap,
         OutlinedButton.icon(
-          onPressed: _busy ? null : () => _decide('return', version, reasonRequired: true, title: 'Return for changes'),
-          icon: const Icon(Icons.undo_rounded),
+          onPressed: _busy
+              ? null
+              : () => _decide(
+                  'return',
+                  version,
+                  reasonRequired: true,
+                  title: 'Return for changes',
+                ),
+          icon: const AppIcon(Icons.undo_rounded),
           label: const Text('Return for changes'),
         ),
         gap,
         OutlinedButton.icon(
           style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-          onPressed: _busy ? null : () => _decide('reject', version, reasonRequired: true, title: 'Not approve this request?'),
-          icon: const Icon(Icons.close_rounded),
+          onPressed: _busy
+              ? null
+              : () => _decide(
+                  'reject',
+                  version,
+                  reasonRequired: true,
+                  title: 'Not approve this request?',
+                ),
+          icon: const AppIcon(Icons.close_rounded),
           label: const Text('Not approve'),
         ),
       ]);
     } else if (state == 'withdrawal_pending') {
       out.addAll([
-        Text('The employee asked to withdraw this request.', style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          'The employee asked to withdraw this request.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         gap,
         FilledButton(
-          onPressed: _busy ? null : () => _resolve('resolve_withdrawal', true, version, reasonRequired: adminFallback),
+          onPressed: _busy
+              ? null
+              : () => _resolve(
+                  'resolve_withdrawal',
+                  true,
+                  version,
+                  reasonRequired: adminFallback,
+                ),
           child: const Text('Accept withdrawal'),
         ),
         gap,
         OutlinedButton(
-          onPressed: _busy ? null : () => _resolve('resolve_withdrawal', false, version, reasonRequired: true),
+          onPressed: _busy
+              ? null
+              : () => _resolve(
+                  'resolve_withdrawal',
+                  false,
+                  version,
+                  reasonRequired: true,
+                ),
           child: const Text('Decline withdrawal'),
         ),
       ]);
     } else if (state == 'cancellation_pending') {
       out.addAll([
-        Text('The employee asked to cancel this approved leave. It stays booked until you decide.',
-            style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          'The employee asked to cancel this approved leave. It stays booked until you decide.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         gap,
         FilledButton(
-          onPressed: _busy ? null : () => _resolve('resolve_cancellation', true, version, reasonRequired: adminFallback),
+          onPressed: _busy
+              ? null
+              : () => _resolve(
+                  'resolve_cancellation',
+                  true,
+                  version,
+                  reasonRequired: adminFallback,
+                ),
           child: const Text('Approve cancellation'),
         ),
         gap,
         OutlinedButton(
-          onPressed: _busy ? null : () => _resolve('resolve_cancellation', false, version, reasonRequired: true),
+          onPressed: _busy
+              ? null
+              : () => _resolve(
+                  'resolve_cancellation',
+                  false,
+                  version,
+                  reasonRequired: true,
+                ),
           child: const Text('Keep the leave approved'),
         ),
       ]);
     } else {
-      out.add(Text('No action is needed on this request now.', style: Theme.of(context).textTheme.bodyMedium));
+      out.add(
+        Text(
+          'No action is needed on this request now.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
     }
-    if (isAdmin && const {'submitted', 'under_review', 'withdrawal_pending', 'cancellation_pending'}.contains(state)) {
+    if (isAdmin &&
+        const {
+          'submitted',
+          'under_review',
+          'withdrawal_pending',
+          'cancellation_pending',
+        }.contains(state)) {
       out.addAll([
         const SizedBox(height: AppSpacing.lg),
         TextButton.icon(
           onPressed: _busy ? null : () => _reassign(version, employeeId),
-          icon: const Icon(Icons.swap_horiz_rounded),
+          icon: const AppIcon(Icons.swap_horiz_rounded),
           label: const Text('Reassign to another approver'),
         ),
       ]);
@@ -329,26 +520,41 @@ class _FallbackPrompt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
-      SectionCard(
-        color: AppColors.warningSoft,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('You are not the assigned approver', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: AppSpacing.sm),
-          const Text('As Admin you can review this request as a fallback. Opening it locks the current version '
-              'for editing, and your reason is recorded in the audit history.'),
-          const SizedBox(height: AppSpacing.lg),
-          FilledButton(
-            onPressed: busy
-                ? null
-                : () async {
-                    final reason = await askReason(context, title: 'Reason for Admin review', confirmLabel: 'Open request');
-                    if (reason != null) onReason(reason);
-                  },
-            child: const Text('Review as Admin'),
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.page),
+      children: [
+        SectionCard(
+          color: AppColors.warningSoft,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You are not the assigned approver',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              const Text(
+                'As Admin you can review this request as a fallback. Opening it locks the current version '
+                'for editing, and your reason is recorded in the audit history.',
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton(
+                onPressed: busy
+                    ? null
+                    : () async {
+                        final reason = await askReason(
+                          context,
+                          title: 'Reason for Admin review',
+                          confirmLabel: 'Open request',
+                        );
+                        if (reason != null) onReason(reason);
+                      },
+                child: const Text('Review as Admin'),
+              ),
+            ],
           ),
-        ]),
-      ),
-    ]);
+        ),
+      ],
+    );
   }
 }

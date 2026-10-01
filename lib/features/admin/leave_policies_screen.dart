@@ -6,6 +6,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -173,7 +174,7 @@ class _TypesTab extends ConsumerWidget {
         if (isAdmin)
           Align(
             alignment: Alignment.centerRight,
-            child: TextButton.icon(onPressed: () => _edit(context, ref, null), icon: const Icon(Icons.add_rounded),
+            child: TextButton.icon(onPressed: () => _edit(context, ref, null), icon: const AppIcon(Icons.add_rounded),
                 label: const Text('Leave type')),
           ),
         if (rows.isEmpty)
@@ -193,7 +194,7 @@ class _TypesTab extends ConsumerWidget {
                 if ((t['advance_notice_days'] as num? ?? 0) > 0) 'notice ${t['advance_notice_days']} d',
                 if (t['active'] != true) 'inactive',
               ].join(' · ')),
-              trailing: isAdmin ? const Icon(Icons.edit_outlined) : null,
+              trailing: isAdmin ? const AppIcon(Icons.edit_outlined) : null,
               onTap: isAdmin ? () => _edit(context, ref, t) : null,
             ),
           ),
@@ -284,10 +285,10 @@ class _EntitlementsTabState extends ConsumerState<_EntitlementsTab> {
         return ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
           Row(children: [
             IconButton(tooltip: 'Previous year', onPressed: () => setState(() => _year = year - 1),
-                icon: const Icon(Icons.chevron_left_rounded)),
+                icon: const AppIcon(Icons.chevron_left_rounded)),
             Expanded(child: Text('Leave year $year', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium)),
             IconButton(tooltip: 'Next year', onPressed: () => setState(() => _year = year + 1),
-                icon: const Icon(Icons.chevron_right_rounded)),
+                icon: const AppIcon(Icons.chevron_right_rounded)),
           ]),
           SectionCard(
             color: AppColors.leaveCard,
@@ -447,8 +448,8 @@ class _RoutesTab extends ConsumerWidget {
                             'fallback: ${(r['fallback'] as Map?)?['name'] ?? 'none'}',
                           ].join(' · ')),
                     trailing: r['route_id'] == null
-                        ? const Icon(Icons.warning_amber_rounded, color: AppColors.warning)
-                        : const Icon(Icons.edit_outlined),
+                        ? const AppIcon(Icons.warning_amber_rounded, color: AppColors.warning)
+                        : const AppIcon(Icons.edit_outlined),
                     onTap: () => _edit(context, ref, (t['team'] as Map).cast<String, dynamic>(), r),
                   ),
               ]),
@@ -497,6 +498,7 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
             TextField(controller: name, maxLength: 120, decoration: const InputDecoration(labelText: 'Name')),
             const SizedBox(height: AppSpacing.sm),
             DropdownButtonFormField<String?>(
+              icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
               initialValue: office,
               decoration: const InputDecoration(labelText: 'Applies to'),
               items: [
@@ -553,9 +555,9 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
         final selectable = _selected.where((id) => list.any((h) => h['id'] == id && h['state'] == 'draft')).toList();
         return ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
           Row(children: [
-            IconButton(tooltip: 'Previous year', onPressed: () => setState(() => _year--), icon: const Icon(Icons.chevron_left_rounded)),
+            IconButton(tooltip: 'Previous year', onPressed: () => setState(() => _year--), icon: const AppIcon(Icons.chevron_left_rounded)),
             Expanded(child: Text('$_year', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium)),
-            IconButton(tooltip: 'Next year', onPressed: () => setState(() => _year++), icon: const Icon(Icons.chevron_right_rounded)),
+            IconButton(tooltip: 'Next year', onPressed: () => setState(() => _year++), icon: const AppIcon(Icons.chevron_right_rounded)),
           ]),
           SectionCard(
             color: AppColors.holidayCard,
@@ -572,7 +574,7 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
           ),
           const SizedBox(height: AppSpacing.md),
           Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
-            OutlinedButton.icon(onPressed: () => _edit(null), icon: const Icon(Icons.add_rounded), label: const Text('Add holiday')),
+            OutlinedButton.icon(onPressed: () => _edit(null), icon: const AppIcon(Icons.add_rounded), label: const Text('Add holiday')),
             if (widget.isAdmin && selectable.isNotEmpty)
               FilledButton(
                 onPressed: () async {
@@ -604,7 +606,7 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
                         value: _selected.contains(h['id']),
                         onChanged: (v) => setState(() => v == true ? _selected.add(h['id'] as String) : _selected.remove(h['id'])),
                       )
-                    : Icon(h['state'] == 'published' ? Icons.event_available_rounded : Icons.edit_calendar_outlined,
+                    : AppIcon(h['state'] == 'published' ? Icons.event_available_rounded : Icons.edit_calendar_outlined,
                         color: AppColors.holidayText),
                 title: Text(h['name'] as String),
                 subtitle: Text([
@@ -616,7 +618,7 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
                 trailing: h['state'] == 'draft'
                     ? IconButton(
                         tooltip: 'Remove draft',
-                        icon: const Icon(Icons.delete_outline_rounded),
+                        icon: const AppIcon(Icons.delete_outline_rounded),
                         onPressed: () => _run(context, () async {
                           await ref.read(apiProvider).rpc('delete_holiday_draft', {'p_id': h['id']});
                           _reload();
@@ -633,7 +635,7 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
               onPressed: _refreshing ? null : _refreshSuggestions,
               icon: _refreshing
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.refresh_rounded),
+                  : const AppIcon(Icons.refresh_rounded),
               label: const Text('Refresh'),
             ),
           ]),
@@ -667,7 +669,7 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
                     trailing: Wrap(children: [
                       IconButton(
                         tooltip: 'Dismiss',
-                        icon: const Icon(Icons.close_rounded),
+                        icon: const AppIcon(Icons.close_rounded),
                         onPressed: () => _run(context, () async {
                           await ref.read(apiProvider).rpc('dismiss_holiday_suggestion', {'p_id': x['id']});
                           ref.invalidate(_suggestionsProvider);
@@ -675,7 +677,7 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
                       ),
                       IconButton(
                         tooltip: 'Add as draft',
-                        icon: const Icon(Icons.playlist_add_rounded),
+                        icon: const AppIcon(Icons.playlist_add_rounded),
                         onPressed: x['existing_holiday'] != null
                             ? null
                             : () => _run(context, () async {

@@ -9,6 +9,7 @@ import '../../core/auth/session_controller.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
 import '../../core/widgets/accordion.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -102,6 +103,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                   decoration: const InputDecoration(labelText: 'Designation'),
                 ),
                 DropdownButtonFormField<String?>(
+                  icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
                   initialValue: dept,
                   decoration: const InputDecoration(labelText: 'Department'),
                   items: [
@@ -175,6 +177,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
+                    icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
                     initialValue: value,
                     decoration: InputDecoration(labelText: 'New $kind'),
                     items: [
@@ -352,6 +355,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
+                    icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
                     initialValue: typeId,
                     decoration: const InputDecoration(labelText: 'Leave type'),
                     items: [
@@ -447,6 +451,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                   ),
                   if (kind == 'extra_workday')
                     DropdownButtonFormField<String>(
+                      icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
                       initialValue: shiftId,
                       decoration: const InputDecoration(labelText: 'Shift'),
                       items: [
@@ -690,14 +695,14 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                       children: [
                         OutlinedButton.icon(
                           onPressed: () => context.push('/reports/hours?employee=${widget.id}'),
-                          icon: const Icon(Icons.schedule_rounded),
+                          icon: const AppIcon(Icons.schedule_rounded),
                           label: const Text('Attendance & hours'),
                         ),
                         if (canEdit && active) ...[
                           const SizedBox(height: AppSpacing.sm),
                           OutlinedButton.icon(
                             onPressed: _busy ? null : _scheduleException,
-                            icon: const Icon(Icons.event_busy_outlined),
+                            icon: const AppIcon(Icons.event_busy_outlined),
                             label: const Text('Schedule exception'),
                           ),
                         ],
@@ -705,7 +710,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                           const SizedBox(height: AppSpacing.sm),
                           OutlinedButton.icon(
                             onPressed: _busy ? null : _adjustLeave,
-                            icon: const Icon(Icons.exposure_rounded),
+                            icon: const AppIcon(Icons.exposure_rounded),
                             label: const Text('Adjust leave balance'),
                           ),
                         ],
@@ -713,7 +718,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                           const SizedBox(height: AppSpacing.sm),
                           OutlinedButton.icon(
                             onPressed: _busy ? null : () => _resetPassword(e),
-                            icon: const Icon(Icons.lock_reset_rounded),
+                            icon: const AppIcon(Icons.lock_reset_rounded),
                             label: const Text('Reset password'),
                           ),
                         ],
@@ -724,7 +729,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                               foregroundColor: active ? AppColors.error : AppColors.success,
                             ),
                             onPressed: _busy ? null : () => _setStatus(e, version, !active),
-                            icon: Icon(active ? Icons.person_off_outlined : Icons.person_outline_rounded),
+                            icon: AppIcon(active ? Icons.person_off_outlined : Icons.person_outline_rounded),
                             label: Text(active ? 'Deactivate' : 'Reactivate'),
                           ),
                         ],
@@ -774,7 +779,7 @@ class _FilesSection extends ConsumerWidget {
             for (final doc in docs)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.picture_as_pdf_outlined),
+                leading: const AppIcon(Icons.picture_as_pdf_outlined),
                 title: Text(doc['title'] as String? ?? 'Document', maxLines: 2, overflow: TextOverflow.ellipsis),
                 subtitle: Text(
                   [
@@ -836,7 +841,7 @@ class _FilesSection extends ConsumerWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   dense: true,
-                  leading: const Icon(Icons.receipt_long_outlined),
+                  leading: const AppIcon(Icons.receipt_long_outlined),
                   title: Text(monthLabel(s['salary_month'])),
                   subtitle: Text(switch (s['state']) {
                     'published' => 'Published',
@@ -875,7 +880,7 @@ class _DevicesSection extends StatelessWidget {
         for (final d in devices)
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(d['revoked_at'] == null ? Icons.smartphone_rounded : Icons.phonelink_erase_rounded),
+            leading: AppIcon(d['revoked_at'] == null ? Icons.smartphone_rounded : Icons.phonelink_erase_rounded),
             title: Text((d['label'] as String?) ?? d['platform'] as String? ?? 'Phone'),
             subtitle: Text(
               d['revoked_at'] == null
@@ -887,7 +892,7 @@ class _DevicesSection extends StatelessWidget {
                 ? IconButton(
                     tooltip: 'Remove phone',
                     onPressed: () => onRevoke!(d['id'] as String),
-                    icon: const Icon(Icons.delete_outline_rounded),
+                    icon: const AppIcon(Icons.delete_outline_rounded),
                   )
                 : null,
           ),

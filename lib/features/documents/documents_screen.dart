@@ -8,6 +8,7 @@ import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/states.dart';
 import '../files/file_service.dart';
@@ -112,7 +113,7 @@ class _DocumentDetailsDialogState extends State<_DocumentDetailsDialog> {
               contentPadding: EdgeInsets.zero,
               title: const Text('Document date'),
               subtitle: Text(_date == null ? 'None (not part of annual archives)' : OrgTime.date(OrgTime.ymd(_date!))),
-              trailing: const Icon(Icons.event_outlined),
+              trailing: const AppIcon(Icons.event_outlined),
               onTap: () async {
                 final d = await showDatePicker(
                     context: context, firstDate: DateTime(2000), lastDate: OrgTime.today(), initialDate: _date ?? OrgTime.today());
@@ -236,12 +237,20 @@ Future<bool> removeDocument(BuildContext context, WidgetRef ref, Map<String, dyn
     useRootNavigator: true,
     builder: (_) => PopScope(
       canPop: false,
-      child: AlertDialog(
-        content: Row(children: [
-          const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.6)),
-          const SizedBox(width: AppSpacing.lg),
-          Text(label),
-        ]),
+      child: Dialog(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 280),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const AppIcon(Icons.cloud_upload_outlined, size: 32, color: AppColors.primary),
+              const SizedBox(height: AppSpacing.md),
+              Text(label, style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: AppSpacing.lg),
+              const LinearProgressIndicator(minHeight: 5, borderRadius: BorderRadius.all(Radius.circular(999))),
+            ]),
+          ),
+        ),
       ),
     ),
   ).whenComplete(() => open = false);
@@ -254,32 +263,20 @@ Future<bool> removeDocument(BuildContext context, WidgetRef ref, Map<String, dyn
 }
 
 /// S18 — company policies and the employee's own documents. Files open only
-/// through the audited viewer; nothing is cached on the phone.
+/// through the audited viewer; nothing is cached on the phone. With
+/// [policiesOnly] it shows just the company policies (Explore → Company
+/// policies), where Admin and policy editors add, rename and remove them.
 class DocumentsScreen extends ConsumerWidget {
-  const DocumentsScreen({super.key});
+  const DocumentsScreen({super.key, this.policiesOnly = false});
+  final bool policiesOnly;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(myDocumentsProvider);
     final session = ref.watch(sessionContextProvider);
-    final canPublishPolicy = session?.canDraftPolicy ?? false;
     final t = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Documents'),
-        actions: [
-          if (canPublishPolicy)
-            IconButton(
-              tooltip: 'Add company policy',
-              icon: const Icon(Icons.policy_outlined),
-              onPressed: () async {
-                if (await uploadAndPublishDocument(context, ref, fileClass: 'company_policy')) {
-                  ref.invalidate(myDocumentsProvider);
-                }
-              },
-            ),
-        ],
-      ),
+      appBar: AppBar(title: Text(policiesOnly ? 'Company policies' : 'Documents')),
       body: Column(children: [
         const OfflineBanner(),
         Expanded(
@@ -294,11 +291,70 @@ class DocumentsScreen extends ConsumerWidget {
                 final count = (d['count'] as num?)?.toInt() ?? mine.length;
                 final limit = (d['limit'] as num?)?.toInt() ?? documentLimit;
                 final canUpload = d['can_upload'] == true;
-                return ListView(padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.page, AppSpacing.page, 96), children: [
-                  DocumentQuotaHeader(title: 'My documents', count: count, limit: limit),
-                  const SizedBox(height: 2),
+                final canPublishPolicy = (d['can_publish_policy'] as bool?) ?? (session?.canDraftPolicy ?? false);
+                Future<void> addPolicy() async {
+                  if (await uploadAndPublishDocument(context, ref, fileClass: 'company_policy')) {
+                    ref.invalidate(myDocumentsProvider);
+                  }
+                }
+
+                final policies = [
+                  if (company.isEmpty)
+                    _EmptyPolicies(canAdd: canPublishPolicy)
+                  else
+                    for (final doc in company)
+                      _DocTile(
+                        doc: doc,
+                        menu: doc['can_edit'] == true
+                            ? DocumentMenu(
+                                onRename: () async {
+                                  if (await renameDocument(context, ref, doc)) ref.invalidate(myDocumentsProvider);
+                                },
+                                onRemove: () async {
+                                  if (await removeDocument(context, ref, doc)) ref.invalidate(myDocumentsProvider);
+                                },
+                              )
+                            : null,
+                      ),
+                ];
+                const padding = EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.page, AppSpacing.page, 96);
+                if (policiesOnly) {
+                  return ListView(padding: padding, children: [
+                    Text(
+                      canPublishPolicy
+                          ? 'Everyone in the company can read these. PDF only, up to 5 MB each.'
+                          : 'Rules and policies shared by the company.',
+                      style: t.bodySmall,
+                    ),
+                    if (canPublishPolicy) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      FilledButton.icon(
+                        onPressed: addPolicy,
+                        icon: const AppIcon(Icons.add_rounded),
+                        label: const Text('Add policy'),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.lg),
+                    ...policies,
+                  ]);
+                }
+                return ListView(padding: padding, children: [
+                  DocumentQuotaHeader(title: 'Your documents', count: count, limit: limit),
+                  const SizedBox(height: AppSpacing.sm),
                   Text('Private to you and HR. PDF only, up to 5 MB each.', style: t.bodySmall),
-                  const SizedBox(height: AppSpacing.md),
+                  if (canUpload) ...[
+                    const SizedBox(height: AppSpacing.md),
+                    AddDocumentButton(
+                      count: count,
+                      limit: limit,
+                      onPressed: () async {
+                        if (await uploadAndPublishDocument(context, ref, fileClass: 'employee_document')) {
+                          ref.invalidate(myDocumentsProvider);
+                        }
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: AppSpacing.lg),
                   if (mine.isEmpty)
                     const _EmptyDocs(message: 'Add your ID proof, certificates and other papers here.')
                   else
@@ -317,25 +373,18 @@ class DocumentsScreen extends ConsumerWidget {
                             : null,
                         note: doc['added_by_me'] == true ? null : 'Added by HR',
                       ),
-                  if (canUpload) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    AddDocumentButton(
-                      count: count,
-                      limit: limit,
-                      onPressed: () async {
-                        if (await uploadAndPublishDocument(context, ref, fileClass: 'employee_document')) {
-                          ref.invalidate(myDocumentsProvider);
-                        }
-                      },
-                    ),
-                  ],
                   const SizedBox(height: AppSpacing.xl),
-                  Text('Company policies', style: t.titleMedium),
+                  Row(children: [
+                    Expanded(child: Text('Company policies', style: t.titleMedium)),
+                    if (canPublishPolicy)
+                      TextButton.icon(
+                        onPressed: addPolicy,
+                        icon: const AppIcon(Icons.add_rounded),
+                        label: const Text('Add policy'),
+                      ),
+                  ]),
                   const SizedBox(height: AppSpacing.sm),
-                  if (company.isEmpty)
-                    Text('No company policies published yet.', style: t.bodyMedium)
-                  else
-                    for (final doc in company) _DocTile(doc: doc),
+                  ...policies,
                 ]);
               },
             ),
@@ -390,10 +439,10 @@ class AddDocumentButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final full = count >= limit;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      OutlinedButton.icon(
+      FilledButton.icon(
         onPressed: full ? null : onPressed,
-        icon: const Icon(Icons.upload_file_rounded),
-        label: const Text('Add PDF document'),
+        icon: const AppIcon(Icons.upload_file_rounded),
+        label: const Text('Upload PDF'),
       ),
       if (full)
         Padding(
@@ -414,17 +463,17 @@ class DocumentMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
       tooltip: 'Document options',
-      icon: const Icon(Icons.more_vert_rounded),
+      icon: const AppIcon(Icons.more_vert_rounded),
       onSelected: (v) => v == 'rename' ? onRename() : onRemove(),
       itemBuilder: (_) => const [
         PopupMenuItem(
           value: 'rename',
-          child: ListTile(leading: Icon(Icons.edit_outlined), title: Text('Rename'), contentPadding: EdgeInsets.zero),
+          child: ListTile(leading: AppIcon(Icons.edit_outlined), title: Text('Rename'), contentPadding: EdgeInsets.zero),
         ),
         PopupMenuItem(
           value: 'remove',
           child: ListTile(
-            leading: Icon(Icons.delete_outline_rounded, color: AppColors.error),
+            leading: AppIcon(Icons.delete_outline_rounded, color: AppColors.error),
             title: Text('Remove', style: TextStyle(color: AppColors.error)),
             contentPadding: EdgeInsets.zero,
           ),
@@ -444,11 +493,38 @@ class _EmptyDocs extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.xl),
       decoration: BoxDecoration(color: AppColors.documentsCard, borderRadius: BorderRadius.circular(16)),
       child: Column(children: [
-        const Icon(Icons.folder_open_rounded, size: 40, color: AppColors.documentsAction),
+        const AppIcon(Icons.folder_open_rounded, size: 40, color: AppColors.documentsAction),
         const SizedBox(height: AppSpacing.sm),
         Text('No documents yet', style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 2),
         Text(message, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall),
+      ]),
+    );
+  }
+}
+
+class _EmptyPolicies extends StatelessWidget {
+  const _EmptyPolicies({this.canAdd = false});
+  final bool canAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(children: [
+        const AppIcon(Icons.policy_outlined, color: AppColors.textSecondary),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Text(
+            canAdd ? 'No policies yet. Tap "Add policy" to publish one for everyone.' : 'No policies have been published yet.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
       ]),
     );
   }
@@ -469,10 +545,11 @@ class _DocTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: ListTile(
-        contentPadding: const EdgeInsets.only(left: AppSpacing.lg, right: 4),
+        visualDensity: VisualDensity.compact,
+        contentPadding: const EdgeInsets.only(left: AppSpacing.md, right: 2),
         leading: CircleAvatar(
           backgroundColor: AppColors.documentsCard,
-          child: Icon(isPdf ? Icons.picture_as_pdf_outlined : Icons.image_outlined, color: AppColors.documentsAction),
+          child: AppIcon(isPdf ? Icons.picture_as_pdf_outlined : Icons.image_outlined, color: AppColors.documentsAction),
         ),
         title: Text(doc['title'] as String? ?? 'Document', maxLines: 2, overflow: TextOverflow.ellipsis),
         subtitle: Text([
@@ -482,7 +559,12 @@ class _DocTile extends StatelessWidget {
           ?note,
           if (archived) 'Archived locally — contact HR',
         ].join(' · ')),
-        trailing: menu ?? (archived ? null : const Icon(Icons.chevron_right_rounded)),
+        trailing: archived
+            ? null
+            : Row(mainAxisSize: MainAxisSize.min, children: [
+                const AppIcon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+                ?menu,
+              ]),
         onTap: archived || id == null ? null : () => openProtectedFile(context, id, doc['title'] as String? ?? 'Document'),
       ),
     );

@@ -7,6 +7,7 @@ import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -164,6 +165,7 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> {
               const SizedBox(height: AppSpacing.lg),
               FormSection(title: 'Years', children: [
                 DropdownButtonFormField<int>(
+                  icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _annual,
                   decoration: InputDecoration(labelText: 'Annual archive period', errorText: _errors['annual_start_month']),
                   items: const [
@@ -184,6 +186,7 @@ class _OrganizationScreenState extends ConsumerState<OrganizationScreen> {
                       '${p['kind'] == 'transition' ? ' (transition)' : ''}').join(', then ')}',
                       style: Theme.of(context).textTheme.bodySmall),
                 DropdownButtonFormField<int>(
+                  icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
                   initialValue: _leaveYear,
                   decoration: InputDecoration(labelText: 'Leave year starts in', errorText: _errors['leave_year_start_month']),
                   items: [for (var m = 1; m <= 12; m++) DropdownMenuItem(value: m, child: Text(_monthNames[m - 1]))],

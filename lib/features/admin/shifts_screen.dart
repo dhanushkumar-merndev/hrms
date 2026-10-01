@@ -7,6 +7,7 @@ import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -42,7 +43,7 @@ class ShiftsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Shifts')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _edit(context, ref, null, null),
-        icon: const Icon(Icons.add_rounded),
+        icon: const AppIcon(Icons.add_rounded),
         label: const Text('New shift'),
       ),
       body: PermissionGate(

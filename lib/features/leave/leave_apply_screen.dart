@@ -1,3 +1,4 @@
+import '../../core/widgets/app_icon.dart';
 import 'dart:async';
 
 import 'package:file_picker/file_picker.dart';
@@ -338,7 +339,7 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
             if (type?['requires_attachment'] == true || _attachmentId != null)
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.attach_file_rounded),
+                leading: const AppIcon(Icons.attach_file_rounded),
                 title: Text(_attachmentName ?? 'Supporting document${type?['requires_attachment'] == true ? ' (required)' : ''}'),
                 subtitle: Text(_errors['attachment'] ?? 'PDF, JPG or PNG up to 5 MB',
                     style: TextStyle(color: _errors['attachment'] != null ? AppColors.error : null)),
@@ -408,7 +409,7 @@ class _TypeOption extends StatelessWidget {
             border: Border.all(color: selected ? AppColors.leaveAction : AppColors.border, width: selected ? 1.6 : 1),
           ),
           child: Row(children: [
-            Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+            AppIcon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
                 color: selected ? AppColors.leaveAction : AppColors.textSecondary),
             const SizedBox(width: AppSpacing.md),
             Expanded(child: Text(type['name'] as String? ?? '', style: Theme.of(context).textTheme.titleSmall)),
@@ -437,7 +438,7 @@ class _DateField extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: InputDecorator(
-        decoration: InputDecoration(labelText: label, errorText: error, suffixIcon: const Icon(Icons.event_outlined)),
+        decoration: InputDecoration(labelText: label, errorText: error, suffixIcon: const AppIcon(Icons.event_outlined)),
         child: Text(date == null ? 'Choose' : OrgTime.date(OrgTime.ymd(date!), pattern: 'd MMM yyyy')),
       ),
     );

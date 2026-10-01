@@ -5,6 +5,7 @@ import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/format.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -103,7 +104,7 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
               ),
               const SizedBox(height: AppSpacing.md),
               TextField(
-                decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search people'),
+                decoration: const InputDecoration(prefixIcon: AppIcon(Icons.search_rounded), hintText: 'Search people'),
                 onChanged: (v) => setState(() => _query = v.trim()),
               ),
               const SizedBox(height: AppSpacing.md),

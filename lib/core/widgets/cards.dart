@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import 'app_icon.dart';
 import 'illustration.dart';
 
 /// White rounded card used for Home sections and detail blocks.
@@ -37,13 +38,14 @@ class SectionHeader extends StatelessWidget {
         IconButton(
           tooltip: moreLabel ?? 'Open $title',
           onPressed: onMore,
-          icon: const Icon(Icons.north_east_rounded, color: AppColors.text),
+          icon: const AppIcon(Icons.north_east_rounded, color: AppColors.text),
         ),
     ]);
   }
 }
 
-/// White action row with a soft coloured icon tile (reference 02).
+/// White action row with a soft coloured icon tile (reference 02). With
+/// [art] the tile shows that bundled illustration instead of [icon].
 class ActionRow extends StatelessWidget {
   const ActionRow({
     super.key,
@@ -54,9 +56,11 @@ class ActionRow extends StatelessWidget {
     required this.onTap,
     this.subtitle,
     this.badge,
+    this.art,
   });
 
   final IconData icon;
+  final String? art;
   final String label;
   final String? subtitle;
   final Color tileColor;
@@ -78,8 +82,9 @@ class ActionRow extends StatelessWidget {
             Container(
               width: AppSpacing.iconTile,
               height: AppSpacing.iconTile,
+              alignment: Alignment.center,
               decoration: BoxDecoration(color: tileColor, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: iconColor, size: 26),
+              child: art == null ? AppIcon(icon, color: iconColor, size: 26) : Illustration(art!, size: 42),
             ),
             const SizedBox(width: AppSpacing.lg),
             Expanded(
@@ -90,7 +95,7 @@ class ActionRow extends StatelessWidget {
             ),
             if (badge != null) CountBadge(badge!),
             const SizedBox(width: AppSpacing.xs),
-            const Icon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
+            const AppIcon(Icons.chevron_right_rounded, color: AppColors.textSecondary),
           ]),
         ),
       ),
@@ -196,7 +201,7 @@ class ModuleCard extends StatelessWidget {
                         AnimatedRotation(
                           turns: expanded ? 0.5 : 0,
                           duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 180),
-                          child: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.text, size: 28),
+                          child: const AppIcon(Icons.keyboard_arrow_down_rounded, color: AppColors.text, size: 28),
                         ),
                       ]),
                       const SizedBox(height: AppSpacing.sm),
@@ -243,7 +248,7 @@ class StatusChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (icon != null) ...[Icon(icon, size: 14, color: fg), const SizedBox(width: 4)],
+        if (icon != null) ...[AppIcon(icon, size: 14, color: fg), const SizedBox(width: 4)],
         Flexible(
           child: Text(label,
               style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),

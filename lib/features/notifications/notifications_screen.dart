@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/paged_list.dart';
 import '../../core/widgets/states.dart';
@@ -85,7 +86,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Icon(_icon(n['kind'] as String?), color: AppColors.primary),
+                      AppIcon(_icon(n['kind'] as String?), color: AppColors.primary),
                       const SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -102,7 +103,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       if (unread)
                         const Padding(
                           padding: EdgeInsets.only(top: 6),
-                          child: Icon(Icons.circle, size: 10, color: AppColors.primary),
+                          child: AppIcon(Icons.circle, size: 10, color: AppColors.primary),
                         ),
                     ]),
                   ),

@@ -1,3 +1,4 @@
+import '../../core/widgets/app_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -54,7 +55,7 @@ class _ShiftSummary extends StatelessWidget {
     final office = (shift['office'] as Map?)?.cast<String, dynamic>();
     return SectionCard(
       child: Row(children: [
-        const Icon(Icons.schedule_rounded, color: AppColors.primary, size: 30),
+        const AppIcon(Icons.schedule_rounded, color: AppColors.primary, size: 30),
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -192,7 +193,7 @@ class _Message extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Icon(icon, color: tone, size: 40),
+        AppIcon(icon, color: tone, size: 40),
         const SizedBox(height: AppSpacing.md),
         Text(text, style: Theme.of(context).textTheme.bodyLarge, textAlign: TextAlign.center),
         if (actions.isNotEmpty) ...[
@@ -213,7 +214,7 @@ class _DeviceSetup extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Icon(Icons.phonelink_lock_rounded, color: AppColors.primary, size: 40),
+        const AppIcon(Icons.phonelink_lock_rounded, color: AppColors.primary, size: 40),
         const SizedBox(height: AppSpacing.md),
         Text('Set up this phone for punching', style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
         const SizedBox(height: AppSpacing.md),
@@ -236,7 +237,7 @@ class _DeviceSetup extends StatelessWidget {
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
-        FilledButton.icon(onPressed: onSetup, icon: const Icon(Icons.fingerprint), label: const Text('Set up this phone')),
+        FilledButton.icon(onPressed: onSetup, icon: const AppIcon(Icons.fingerprint), label: const Text('Set up this phone')),
       ]),
     );
   }
@@ -321,13 +322,13 @@ class _ReadyState extends State<_Ready> {
           minimumSize: const Size.fromHeight(56),
           shape: const StadiumBorder(),
         ),
-        icon: const Icon(Icons.fingerprint, size: 28),
+        icon: const AppIcon(Icons.fingerprint, size: 28),
         label: Text(widget.isOut ? 'Verify & check out' : 'Verify & check in', style: const TextStyle(fontSize: 18)),
       ),
       const SizedBox(height: AppSpacing.sm),
       OutlinedButton.icon(
         onPressed: widget.controller.acquire,
-        icon: const Icon(Icons.refresh_rounded),
+        icon: const AppIcon(Icons.refresh_rounded),
         label: const Text('Refresh location'),
       ),
     ]);
@@ -346,7 +347,7 @@ class _Metric extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, color: tone, size: 22),
+        AppIcon(icon, color: tone, size: 22),
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -370,7 +371,7 @@ class _Success extends StatelessWidget {
     return SectionCard(
       color: AppColors.successSoft,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Icon(Icons.verified_rounded, color: AppColors.success, size: 56),
+        const AppIcon(Icons.verified_rounded, color: AppColors.success, size: 56),
         const SizedBox(height: AppSpacing.md),
         Text('$action at ${OrgTime.time(result['server_time'])}',
             style: Theme.of(context).textTheme.titleLarge, textAlign: TextAlign.center),

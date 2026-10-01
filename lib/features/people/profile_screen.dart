@@ -8,6 +8,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/pickers.dart';
@@ -88,11 +89,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final data = ref.watch(myProfileProvider);
     return Scaffold(
       appBar: AppBar(title: const Text('My profile'), actions: [
-        IconButton(
-          tooltip: 'Settings',
+        TextButton.icon(
           onPressed: () => context.push('/settings'),
-          icon: const Icon(Icons.settings_outlined),
+          icon: const AppIcon(Icons.settings_outlined, size: 20),
+          label: const Text('Settings'),
         ),
+        const SizedBox(width: AppSpacing.sm),
       ]),
       body: AsyncView(
         value: data,
@@ -103,6 +105,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           final private = ((p['private'] as Map?) ?? const {}).cast<String, dynamic>();
           final shift = (p['shift'] as Map?)?.cast<String, dynamic>();
           String? nameOf(Object? m) => (m as Map?)?['name'] as String?;
+          final hasPrivateDetails = [
+            'personal_email',
+            'personal_phone',
+            'address',
+            'emergency_contact_name',
+            'emergency_contact_phone',
+            'date_of_birth',
+          ].any((key) => (private[key] as String?)?.trim().isNotEmpty == true);
+
+          Future<void> editPrivateDetails() async {
+            final saved = await showPrivateDetailsEditor(context, ref, private: private, own: true);
+            if (saved) ref.invalidate(myProfileProvider);
+          }
+
           return RefreshIndicator(
             onRefresh: () => ref.refresh(myProfileProvider.future),
             child: ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
@@ -120,28 +136,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         for (final r in roles) StatusChip(roleLabel(r), tone: ChipTone.info),
                         if (roles.isEmpty) const StatusChip('Member', tone: ChipTone.neutral),
                       ]),
+                      const SizedBox(height: AppSpacing.xs),
+                      TextButton.icon(
+                        onPressed: _uploading ? null : _changePhoto,
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(0, 40),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: _uploading
+                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const AppIcon(Icons.photo_camera_outlined, size: 19),
+                        label: const Text('Change photo'),
+                      ),
                     ]),
                   ),
                 ]),
               ),
-              const SizedBox(height: AppSpacing.sm),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: _uploading ? null : _changePhoto,
-                  icon: _uploading
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.photo_camera_outlined),
-                  label: const Text('Change photo'),
-                ),
-              ),
+              const SizedBox(height: AppSpacing.lg),
               SectionCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Work', style: Theme.of(context).textTheme.titleSmall),
                   const SizedBox(height: AppSpacing.sm),
-                  KeyValueRow('Department', nameOf(p['department']) ?? '—'),
-                  KeyValueRow('Team', nameOf(p['team']) ?? '—'),
-                  KeyValueRow('Reports to', nameOf(p['manager']) ?? '—'),
+                  if (nameOf(p['department']) != null) KeyValueRow('Department', nameOf(p['department'])!),
+                  if (nameOf(p['team']) != null) KeyValueRow('Team', nameOf(p['team'])!),
+                  if (nameOf(p['manager']) != null) KeyValueRow('Reports to', nameOf(p['manager'])!),
                   KeyValueRow('Office', nameOf(p['office']) ?? 'Not assigned'),
                   KeyValueRow(
                       'Shift',
@@ -154,7 +173,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   if (p['business_email'] != null) KeyValueRow('Work email', p['business_email'] as String),
                   if (p['business_phone'] != null) KeyValueRow('Work phone', p['business_phone'] as String),
                   const SizedBox(height: AppSpacing.xs),
-                  Text('Changes to role, team, office or shift are made by HR.', style: Theme.of(context).textTheme.bodySmall),
+                  Text('Ask HR to change your work details.', style: Theme.of(context).textTheme.bodySmall),
                 ]),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -163,17 +182,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   Row(children: [
                     Expanded(child: Text('Personal details', style: Theme.of(context).textTheme.titleSmall)),
                     TextButton.icon(
-                      onPressed: () async {
-                        final saved = await showPrivateDetailsEditor(context, ref, private: private, own: true);
-                        if (saved) ref.invalidate(myProfileProvider);
-                      },
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Edit'),
+                      onPressed: editPrivateDetails,
+                      icon: const AppIcon(Icons.edit_outlined),
+                      label: Text(hasPrivateDetails ? 'Edit' : 'Add'),
                     ),
                   ]),
                   Text('Visible only to you and HR.', style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(height: AppSpacing.sm),
-                  PrivateDetailsView(private: private),
+                  if (hasPrivateDetails)
+                    PrivateDetailsView(private: private)
+                  else
+                    InkWell(
+                      onTap: editPrivateDetails,
+                      borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.lg),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
+                        ),
+                        child: const Row(children: [
+                          AppIcon(Icons.person_add_alt_1_outlined, color: AppColors.primary),
+                          SizedBox(width: AppSpacing.md),
+                          Expanded(child: Text('Add your phone, email and emergency contact')),
+                          AppIcon(Icons.chevron_right_rounded),
+                        ]),
+                      ),
+                    ),
                 ]),
               ),
             ]),
@@ -190,15 +225,21 @@ class PrivateDetailsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String v(String k) => (private[k] as String?) ?? '—';
+    String? v(String k) {
+      final value = (private[k] as String?)?.trim();
+      return value == null || value.isEmpty ? null : value;
+    }
+
+    final emergencyName = v('emergency_contact_name');
+    final emergencyPhone = v('emergency_contact_phone');
+    final dob = v('date_of_birth');
     return Column(children: [
-      KeyValueRow('Personal email', v('personal_email')),
-      KeyValueRow('Personal phone', v('personal_phone')),
-      KeyValueRow('Address', v('address')),
-      KeyValueRow('Emergency contact', private['emergency_contact_name'] == null
-          ? '—'
-          : '${private['emergency_contact_name']} · ${private['emergency_contact_phone'] ?? ''}'),
-      KeyValueRow('Date of birth', OrgTime.date(private['date_of_birth'] as String?, pattern: 'd MMM yyyy')),
+      if (v('personal_email') case final value?) KeyValueRow('Personal email', value),
+      if (v('personal_phone') case final value?) KeyValueRow('Personal phone', value),
+      if (v('address') case final value?) KeyValueRow('Address', value),
+      if (emergencyName != null || emergencyPhone != null)
+        KeyValueRow('Emergency contact', [emergencyName, emergencyPhone].whereType<String>().join(' · ')),
+      if (dob != null) KeyValueRow('Date of birth', OrgTime.date(dob, pattern: 'd MMM yyyy')),
     ]);
   }
 }

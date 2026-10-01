@@ -1,3 +1,4 @@
+import '../../core/widgets/app_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -50,14 +51,14 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
         if ((session?.canProvision ?? false) || (session?.canManagePayroll ?? false))
           IconButton(
             tooltip: 'Import from Excel',
-            icon: const Icon(Icons.upload_file_rounded),
+            icon: const AppIcon(Icons.upload_file_rounded),
             onPressed: () => context.push('/employees/import').then((_) => setState(() => _generation++)),
           ),
       ]),
       floatingActionButton: (session?.canProvision ?? false)
           ? FloatingActionButton.extended(
               onPressed: () => context.push('/employees/new').then((_) => setState(() => _generation++)),
-              icon: const Icon(Icons.person_add_alt_1_rounded),
+              icon: const AppIcon(Icons.person_add_alt_1_rounded),
               label: const Text('Add employee'),
             )
           : null,
@@ -69,7 +70,7 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
             padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.sm, AppSpacing.page, 0),
             child: TextField(
               controller: _search,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search name or employee ID'),
+              decoration: const InputDecoration(prefixIcon: AppIcon(Icons.search_rounded), hintText: 'Search name or employee ID'),
               onChanged: (v) {
                 _debounce?.cancel();
                 _debounce = Timer(const Duration(milliseconds: 300), () => setState(() => _query = v.trim()));
@@ -96,7 +97,7 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page),
               child: Row(children: [
-                Icon(Icons.groups_2_outlined, size: 18, color: cap.$1 >= cap.$2 ? AppColors.error : AppColors.textSecondary),
+                AppIcon(Icons.groups_2_outlined, size: 18, color: cap.$1 >= cap.$2 ? AppColors.error : AppColors.textSecondary),
                 const SizedBox(width: AppSpacing.sm),
                 Text('${cap.$1} of ${cap.$2} active employees',
                     style: TextStyle(color: cap.$1 >= cap.$2 ? AppColors.error : AppColors.textSecondary)),

@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/states.dart';
 import 'attendance_ui.dart';
@@ -102,7 +103,7 @@ class AttendanceDayScreen extends ConsumerWidget {
                   for (final e in events)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: Icon(e['action'] == 'IN' ? Icons.login_rounded : Icons.logout_rounded,
+                      leading: AppIcon(e['action'] == 'IN' ? Icons.login_rounded : Icons.logout_rounded,
                           color: AppColors.primary),
                       title: Text('${e['action'] == 'IN' ? 'Check in' : 'Check out'} · ${OrgTime.time(e['at'])}'),
                       subtitle: Text('${e['distance_m']} m from office · ±${e['accuracy_m']} m'
@@ -118,7 +119,7 @@ class AttendanceDayScreen extends ConsumerWidget {
                   for (final a in adjustments)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.history_edu_rounded, color: AppColors.warning),
+                      leading: const AppIcon(Icons.history_edu_rounded, color: AppColors.warning),
                       title: Text('Revision ${a['revision']}: ${OrgTime.time(a['effective_in_at'])} – ${OrgTime.time(a['effective_out_at'])}'),
                       subtitle: Text('Approved by ${a['approved_by'] ?? '—'} · ${a['reason']}'),
                     ),
@@ -134,7 +135,7 @@ class AttendanceDayScreen extends ConsumerWidget {
                     ListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text('Request · ${c['state']}'),
-                      trailing: const Icon(Icons.chevron_right_rounded),
+                      trailing: const AppIcon(Icons.chevron_right_rounded),
                       onTap: own ? () => context.push('/requests/${c['id']}') : null,
                     ),
                 ]),
@@ -144,7 +145,7 @@ class AttendanceDayScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.xl),
               FilledButton.icon(
                 onPressed: () => context.push('/corrections/new?date=$date'),
-                icon: const Icon(Icons.edit_calendar_outlined),
+                icon: const AppIcon(Icons.edit_calendar_outlined),
                 label: const Text('Request correction'),
               ),
             ],

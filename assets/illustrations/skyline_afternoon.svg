@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" preserveAspectRatio="xMidYMax slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#D9F4F5"/><stop offset="58%" stop-color="#F0FBFA"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#FFB63F" stop-opacity=".88"/><stop offset=".68" stop-color="#FFD98A" stop-opacity=".5"/><stop offset="1" stop-color="#FFF2C5" stop-opacity="0"/></radialGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFFFFF" stop-opacity="0"/><stop offset=".85" stop-color="#FFFFFF" stop-opacity=".88"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+  </defs>
+  <rect width="400" height="120" fill="url(#sky)"/>
+  <circle cx="318" cy="47" r="32" fill="url(#glow)"/><circle cx="318" cy="47" r="18" fill="#FFB63F"/>
+  <path d="M38 38q12-10 28-4 16-3 24 7 8 1 10 7H35q0-7 3-10zM218 31q12-8 26-2 13-3 21 6 5 1 7 7h-57q0-7 3-11z" fill="#FFFFFF" opacity=".65"/>
+  <g fill="#A9D2D3" opacity=".52"><path d="M15 42h22v78H15zM42 30h18v90H42zM68 48h26v72H68zM100 36h20v84h-20zM135 24h24v96h-24zM175 44h18v76h-18zM202 32h28v88h-28zM245 40h20v80h-20zM278 26h22v94h-22zM330 42h24v78h-24zM362 35h26v85h-26z"/></g>
+  <g fill="#68A9AC" opacity=".8"><path d="M0 62h20v58H0zM25 50h22v70H25zM52 38h16v82H52zM74 58h30v62H74zM110 46h24v74h-24zM145 54h18v66h-18zM170 34h26v86h-26zM170 34q13-10 26 0zM210 50h22v70h-22zM238 58h26v62h-26zM270 44h16v76h-16zM292 52h32v68h-32zM338 48h20v72h-20zM370 56h30v64h-30z"/><path d="M60 24v14" stroke="#68A9AC" stroke-width="2"/></g>
+  <g fill="#277B80"><path d="M8 70h22v50H8zM35 60h24v60H35zM64 66h18v54H64zM88 52h28v68H88zM94 44h16v8H94zM122 64h20v56h-20zM150 58h28v62h-28zM184 68h22v52h-22zM214 60h24v60h-24zM244 66h20v54h-20zM272 56h30v64h-30zM310 62h26v58h-26zM344 58h24v62h-24zM375 68h25v52h-25z"/><path d="M102 36v8" stroke="#277B80" stroke-width="2"/>
+    <g fill="#FFF0A0" opacity=".48"><path d="M42 68h3v4h-3zM48 68h3v4h-3zM96 58h3v4h-3zM104 58h3v4h-3zM156 66h3v4h-3zM164 66h3v4h-3zM280 64h3v4h-3zM288 64h3v4h-3zM350 66h3v4h-3zM358 66h3v4h-3z"/></g>
+  </g>
+  <rect y="106" width="400" height="14" fill="#1C666B" opacity=".25"/><rect y="85" width="400" height="35" fill="url(#fade)"/>
+</svg>

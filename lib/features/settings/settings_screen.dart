@@ -11,6 +11,7 @@ import '../../core/auth/session_controller.dart';
 import '../../core/device/device_key.dart';
 import '../../core/push/push_service.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/states.dart';
@@ -47,7 +48,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.md),
             OutlinedButton.icon(
               onPressed: () => context.push('/settings/password'),
-              icon: const Icon(Icons.password_rounded),
+              icon: const AppIcon(Icons.password_rounded),
               label: const Text('Change password'),
             ),
           ]),
@@ -152,7 +153,7 @@ class SettingsScreen extends ConsumerWidget {
                 confirmLabel: 'Sign out');
             if (ok) await ref.read(sessionProvider.notifier).logout();
           },
-          icon: const Icon(Icons.logout_rounded),
+          icon: const AppIcon(Icons.logout_rounded),
           label: const Text('Sign out'),
         ),
       ]),

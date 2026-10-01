@@ -22,13 +22,21 @@ class ApprovalsScreen extends ConsumerStatefulWidget {
   ConsumerState<ApprovalsScreen> createState() => _ApprovalsScreenState();
 }
 
-const _scopes = <(Object?, String)>[('mine', 'Assigned to me'), ('unassigned', 'No approver'), ('all', 'Everyone')];
+const _scopes = <(Object?, String)>[
+  ('mine', 'Assigned to me'),
+  ('unassigned', 'No approver'),
+  ('all', 'Everyone'),
+];
 const _states = <(Object?, String)>[
   (null, 'All pending'),
   ('submitted', 'New'),
   ('under_review', 'In review'),
   ('withdrawal_pending', 'Withdrawals'),
   ('cancellation_pending', 'Cancellations'),
+  ('completed', 'Completed'),
+  ('approved', 'Approved'),
+  ('rejected', 'Not approved'),
+  ('cancelled', 'Cancelled'),
 ];
 
 class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
@@ -38,10 +46,24 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
   int _generation = 0;
 
   Future<void> _openFilters(bool isAdmin) async {
-    final picked = await showFilterSheet(context, groups: [
-      FilterGroup(title: 'Status', options: _states, value: _state, defaultValue: null),
-      if (isAdmin) FilterGroup(title: 'Whose requests', options: _scopes, value: _scope, defaultValue: 'mine'),
-    ]);
+    final picked = await showFilterSheet(
+      context,
+      groups: [
+        FilterGroup(
+          title: 'Status',
+          options: _states,
+          value: _state,
+          defaultValue: null,
+        ),
+        if (isAdmin)
+          FilterGroup(
+            title: 'Whose requests',
+            options: _scopes,
+            value: _scope,
+            defaultValue: 'mine',
+          ),
+      ],
+    );
     if (picked == null) return;
     setState(() {
       _state = picked[0] as String?;
@@ -54,59 +76,86 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
     final isAdmin = ref.watch(sessionContextProvider)?.isAdmin ?? false;
     final api = ref.read(apiProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Review requests'), actions: [
-        FilterButton(
-          activeCount: (_state != null ? 1 : 0) + (_scope != 'mine' ? 1 : 0),
-          onPressed: () => _openFilters(isAdmin),
-        ),
-        const SizedBox(width: AppSpacing.xs),
-      ]),
+      appBar: AppBar(
+        title: const Text('Review requests'),
+        actions: [
+          FilterButton(
+            activeCount: (_state != null ? 1 : 0) + (_scope != 'mine' ? 1 : 0),
+            onPressed: () => _openFilters(isAdmin),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+        ],
+      ),
       body: PermissionGate(
         allowed: (s) => s.canReview || s.isAdmin,
-        child: Column(children: [
-          const OfflineBanner(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.page, AppSpacing.page, 0),
-            child: PillTabs<String?>(
-              options: const [(null, 'All'), ('leave', 'Leave'), ('correction', 'Corrections')],
-              value: _kind,
-              onChanged: (v) => setState(() => _kind = v),
-            ),
-          ),
-          // The list's own top padding (16) matches the space above the tabs.
-          Expanded(
-            child: PagedList<Map<String, dynamic>>(
-              key: ValueKey('$_kind|$_state|$_scope|$_generation'),
-              fetch: (cursor) async {
-                final c = cursor as (String, String)?;
-                final rows = (await api.rpc('list_review_queue', {
-                  'p_kind': _kind,
-                  'p_scope': _scope,
-                  'p_state': _state,
-                  'p_limit': 25,
-                  'p_before_submitted_at': c?.$1,
-                  'p_before_id': c?.$2,
-                }))
-                    .list;
-                return PageResult(rows,
-                    next: rows.length < 25 ? null : (rows.last['submitted_at'] as String, rows.last['id'] as String));
-              },
-              empty: EmptyState(
-                icon: Icons.fact_check_outlined,
-                title: 'Nothing to review',
-                message: _scope == 'unassigned' ? 'Every pending request has an approver.' : null,
+        child: Column(
+          children: [
+            const OfflineBanner(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.page,
+                AppSpacing.page,
+                AppSpacing.page,
+                0,
               ),
-              itemBuilder: (context, r) => RequestTile(
-                r: r,
-                showEmployee: true,
-                onTap: () => context.push('/approvals/${r['id']}').then((_) {
-                  ref.invalidate(homeSummaryProvider);
-                  if (mounted) setState(() => _generation++);
-                }),
+              child: PillTabs<String?>(
+                options: const [
+                  (null, 'All'),
+                  ('leave', 'Leave'),
+                  ('correction', 'Corrections'),
+                  ('bank_details', 'Bank'),
+                ],
+                value: _kind,
+                onChanged: (v) => setState(() => _kind = v),
               ),
             ),
-          ),
-        ]),
+            // The list's own top padding (16) matches the space above the tabs.
+            Expanded(
+              child: PagedList<Map<String, dynamic>>(
+                key: ValueKey('$_kind|$_state|$_scope|$_generation'),
+                fetch: (cursor) async {
+                  final c = cursor as (String, String)?;
+                  final rows = (await api.rpc('list_review_queue', {
+                    'p_kind': _kind,
+                    'p_scope': _scope,
+                    'p_state': _state,
+                    'p_limit': 25,
+                    'p_before_submitted_at': c?.$1,
+                    'p_before_id': c?.$2,
+                  })).list;
+                  return PageResult(
+                    rows,
+                    next: rows.length < 25
+                        ? null
+                        : (
+                            rows.last['submitted_at'] as String,
+                            rows.last['id'] as String,
+                          ),
+                  );
+                },
+                empty: EmptyState(
+                  icon: Icons.fact_check_outlined,
+                  title: _state == 'completed'
+                      ? 'No completed requests'
+                      : 'Nothing to review',
+                  message: _state == 'completed'
+                      ? 'Approved, not approved and cancelled decisions appear here.'
+                      : _scope == 'unassigned'
+                      ? 'Every pending request has an approver.'
+                      : null,
+                ),
+                itemBuilder: (context, r) => RequestTile(
+                  r: r,
+                  showEmployee: true,
+                  onTap: () => context.push('/approvals/${r['id']}').then((_) {
+                    ref.invalidate(homeSummaryProvider);
+                    if (mounted) setState(() => _generation++);
+                  }),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

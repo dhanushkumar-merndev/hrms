@@ -10,6 +10,7 @@ import '../../core/auth/session_controller.dart';
 import '../../core/files/save_file.dart';
 import '../../core/files/xlsx.dart';
 import '../../core/files/xlsx_reader.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -232,7 +233,7 @@ class _EmployeeImportScreenState extends ConsumerState<EmployeeImportScreen> {
                   onPressed: _busy ? null : _import,
                   icon: _busy
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                      : const Icon(Icons.cloud_upload_outlined),
+                      : const AppIcon(Icons.cloud_upload_outlined),
                   label: Text(_busy
                       ? 'Importing $_done of ${plan.actionable.length}…'
                       : 'Import ${plan.actionable.length} ${plan.actionable.length == 1 ? 'row' : 'rows'}'),
@@ -250,7 +251,7 @@ class _EmployeeImportScreenState extends ConsumerState<EmployeeImportScreen> {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(color: AppColors.approvalsCard, borderRadius: BorderRadius.circular(14)),
-                  child: const Icon(Icons.table_view_rounded, color: AppColors.approvalsAction),
+                  child: const AppIcon(Icons.table_view_rounded, color: AppColors.approvalsAction),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
@@ -268,13 +269,13 @@ class _EmployeeImportScreenState extends ConsumerState<EmployeeImportScreen> {
               const SizedBox(height: AppSpacing.md),
               FilledButton.tonalIcon(
                 onPressed: _busy ? null : _pick,
-                icon: const Icon(Icons.folder_open_rounded),
+                icon: const AppIcon(Icons.folder_open_rounded),
                 label: Text(_filename == null ? 'Choose file' : 'Choose another file'),
               ),
               const SizedBox(height: AppSpacing.sm),
               TextButton.icon(
                 onPressed: _busy ? null : _downloadTemplate,
-                icon: const Icon(Icons.download_rounded),
+                icon: const AppIcon(Icons.download_rounded),
                 label: const Text('Download the template'),
               ),
               if (_busy && plan == null) const LinearProgressIndicator(),
@@ -284,6 +285,7 @@ class _EmployeeImportScreenState extends ConsumerState<EmployeeImportScreen> {
           if (_sheets.length > 1) ...[
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<int>(
+              icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
               initialValue: _sheetIndex,
               decoration: const InputDecoration(labelText: 'Sheet'),
               items: [
@@ -353,7 +355,7 @@ class _Counts extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16)),
             child: Column(children: [
-              Icon(icon, color: fg, size: 20),
+              AppIcon(icon, color: fg, size: 20),
               const SizedBox(height: 4),
               Text('$n', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: fg)),
               Text(label, style: TextStyle(fontSize: 12, color: fg, fontWeight: FontWeight.w600)),
@@ -415,7 +417,7 @@ class _RowCard extends StatelessWidget {
   static Widget _line(IconData icon, String text, Color color) => Padding(
         padding: const EdgeInsets.only(top: 6),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 16, color: color),
+          AppIcon(icon, size: 16, color: color),
           const SizedBox(width: 6),
           Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: color))),
         ]),
@@ -458,7 +460,7 @@ class _ImportSummary extends StatelessWidget {
                   ),
                   IconButton(
                     tooltip: 'Copy',
-                    icon: const Icon(Icons.copy_rounded),
+                    icon: const AppIcon(Icons.copy_rounded),
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: password));
                       showMessage(context, 'Copied $code password.');

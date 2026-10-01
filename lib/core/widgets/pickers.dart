@@ -1,3 +1,4 @@
+import 'app_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -29,7 +30,7 @@ class PickerField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           errorText: error,
-          suffixIcon: Icon(icon ?? Icons.arrow_drop_down_rounded),
+          suffixIcon: AppIcon(icon ?? Icons.arrow_drop_down_rounded),
           enabled: onTap != null,
         ),
         child: Text(value ?? 'Choose', style: TextStyle(color: value == null ? AppColors.textSecondary : AppColors.text)),
@@ -104,7 +105,7 @@ class TimeField extends StatelessWidget {
         ),
       ),
       if (onClear != null && time != null)
-        IconButton(tooltip: 'Clear $label', onPressed: onClear, icon: const Icon(Icons.close_rounded)),
+        IconButton(tooltip: 'Clear $label', onPressed: onClear, icon: const AppIcon(Icons.close_rounded)),
     ]);
   }
 }
@@ -123,13 +124,13 @@ Future<DateTime?> pickMonth(BuildContext context, {DateTime? initial, DateTime? 
           IconButton(
             tooltip: 'Previous year',
             onPressed: year > min.year ? () => setState(() => year--) : null,
-            icon: const Icon(Icons.chevron_left_rounded),
+            icon: const AppIcon(Icons.chevron_left_rounded),
           ),
           Expanded(child: Text('$year', textAlign: TextAlign.center)),
           IconButton(
             tooltip: 'Next year',
             onPressed: year < max.year ? () => setState(() => year++) : null,
-            icon: const Icon(Icons.chevron_right_rounded),
+            icon: const AppIcon(Icons.chevron_right_rounded),
           ),
         ]),
         content: SizedBox(
@@ -247,7 +248,7 @@ class _EmployeePickerState extends ConsumerState<_EmployeePicker> {
             padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.lg, AppSpacing.page, AppSpacing.sm),
             child: Row(children: [
               Expanded(child: Text(widget.title, style: Theme.of(context).textTheme.titleMedium)),
-              IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
+              IconButton(tooltip: 'Close', onPressed: () => Navigator.pop(context), icon: const AppIcon(Icons.close_rounded)),
             ]),
           ),
           Padding(
@@ -255,7 +256,7 @@ class _EmployeePickerState extends ConsumerState<_EmployeePicker> {
             child: TextField(
               controller: _query,
               autofocus: true,
-              decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Name or employee ID'),
+              decoration: const InputDecoration(prefixIcon: AppIcon(Icons.search_rounded), hintText: 'Name or employee ID'),
               onChanged: (_) {
                 _debounce?.cancel();
                 _debounce = Timer(const Duration(milliseconds: 300), _load);

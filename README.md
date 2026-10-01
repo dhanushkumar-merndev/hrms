@@ -35,6 +35,31 @@ flutter analyze && flutter test
 
 Never point `tool/local_db.sh` or `tool/db_test.sh` at a real database: they drop and recreate it.
 
+## Running on a phone
+
+Plug in an Android phone with USB debugging on (Developer options → USB debugging; on vivo also "Install via
+USB") and accept the "Allow USB debugging?" prompt. `build/app_config.json` comes from `tool/gen_app_config.dart`.
+
+```sh
+# Build, install and open in one step (asks which phone if several are connected)
+flutter run --release --dart-define-from-file=build/app_config.json
+
+# While changing UI: debug build; press r = hot reload, R = restart, q = quit
+flutter run --dart-define-from-file=build/app_config.json
+
+# Or build the APK and install it separately (add -s <serial> from `adb devices` for a specific phone)
+flutter build apk --release --target-platform android-arm64 --dart-define-from-file=build/app_config.json
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+```
+
+`adb` lives in `~/Android/Sdk/platform-tools` (fish: `fish_add_path ~/Android/Sdk/platform-tools`).
+
+- Gradle fails within seconds with "Failed to exec spawn helper": Java was updated under a running Gradle daemon.
+  Run `pkill -f GradleDaemon` and build again.
+- "signatures do not match" on install: the phone has a build signed with a different key. `adb uninstall
+  com.internalhrms.hrms` first — this signs the phone out and removes its punch registration.
+- Launcher still shows the old icon after an update: restart the phone.
+
 ## Deploying to a Supabase project
 
 1. `cp .env.example .env` and fill it in (never commit `.env`; only `APP_*` values reach the app).

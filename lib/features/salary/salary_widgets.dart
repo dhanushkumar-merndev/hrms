@@ -1,3 +1,4 @@
+import '../../core/widgets/app_icon.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -52,163 +53,183 @@ class SalaryCard extends StatelessWidget {
       button: onTap != null,
       label: revealed ? 'Salary card. Monthly salary $amount. Tap to hide.' : 'Salary card, hidden. Tap to reveal.',
       excludeSemantics: true,
-      child: AspectRatio(
-        aspectRatio: compact ? 1.9 : 1.62,
-        // Shadow outside, everything else clipped to the rounded card so no
-        // square corner (ink, ring or highlight) shows at the edges.
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: const [BoxShadow(color: Color(0x332B3285), blurRadius: 18, offset: Offset(0, 8))],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1F2560), Color(0xFF3B47B5), Color(0xFF7A55D3)],
-                  stops: [0, 0.55, 1],
-                ),
+      child: AnimatedSlide(
+        duration: const Duration(milliseconds: 360),
+        curve: Curves.easeOutCubic,
+        offset: revealed ? const Offset(0, -0.025) : Offset.zero,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 360),
+          curve: Curves.easeOutCubic,
+          scale: busy ? 0.985 : (revealed ? 1.01 : 1),
+          child: AspectRatio(
+            aspectRatio: compact ? 1.9 : 1.5,
+            // The card lifts only when its private values are visible. This
+            // gives the interaction a clear response without a perpetual
+            // animation running in the background.
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 360),
+              curve: Curves.easeOutCubic,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: revealed ? const Color(0x502B3285) : const Color(0x332B3285),
+                    blurRadius: revealed ? 28 : 18,
+                    offset: Offset(0, revealed ? 14 : 8),
+                    spreadRadius: revealed ? -3 : -5,
+                  ),
+                ],
               ),
-              child: Material(
-                type: MaterialType.transparency,
-                child: InkWell(
-                  onTap: busy ? null : onTap,
-                  child: Stack(
-                    children: [
-                      // Soft decorative rings.
-                      Positioned(right: -60, top: -70, child: _ring(200, 0.08)),
-                      Positioned(right: 40, bottom: -90, child: _ring(180, 0.06)),
-                      Positioned(left: -40, bottom: -60, child: _ring(140, 0.05)),
-                      Padding(
-                        padding: EdgeInsets.all(compact ? 18 : 22),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1F2560), Color(0xFF3B47B5), Color(0xFF7A55D3)],
+                      stops: [0, 0.55, 1],
+                    ),
+                  ),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: InkWell(
+                      onTap: busy ? null : onTap,
+                      child: Stack(
+                        children: [
+                          // Soft decorative rings.
+                          Positioned(right: -60, top: -70, child: _ring(200, 0.08)),
+                          Positioned(right: 40, bottom: -90, child: _ring(180, 0.06)),
+                          Positioned(left: -40, bottom: -60, child: _ring(140, 0.05)),
+                          Padding(
+                            padding: EdgeInsets.all(compact ? 18 : 22),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Text(
-                                    bank,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.3,
-                                    ),
-                                  ),
-                                ),
-                                Transform.rotate(
-                                  angle: math.pi / 2,
-                                  child: const Icon(Icons.wifi_rounded, color: Colors.white70, size: 22),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: compact ? 8 : 14),
-                            const _Chip(),
-                            const Spacer(),
-                            const Text(
-                              'MONTHLY SALARY',
-                              style: TextStyle(
-                                color: Colors.white60,
-                                fontSize: 11,
-                                letterSpacing: 1.6,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 280),
-                              transitionBuilder: (child, a) => FadeTransition(
-                                opacity: a,
-                                child: SlideTransition(
-                                  position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a),
-                                  child: child,
-                                ),
-                              ),
-                              child: Text(
-                                amount,
-                                key: ValueKey(revealed),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: amountSize,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: revealed ? 0.5 : 2,
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        revealed && last4 != null
-                                            ? '••••  ••••  ••••  $last4'
-                                            : '••••  ••••  ••••  ••••',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 15,
-                                          letterSpacing: 1.5,
-                                          fontFeatures: [FontFeature.tabularFigures()],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        holder.toUpperCase(),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        bank,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: 1.2),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.3,
+                                        ),
                                       ),
-                                    ],
+                                    ),
+                                    Transform.rotate(
+                                      angle: math.pi / 2,
+                                      child: const AppIcon(Icons.wifi_rounded, color: Colors.white70, size: 22),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: compact ? 8 : 14),
+                                const _Chip(),
+                                const Spacer(),
+                                const Text(
+                                  'MONTHLY SALARY',
+                                  style: TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 11,
+                                    letterSpacing: 1.6,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                if (busy)
-                                  const SizedBox(
-                                    width: 26,
-                                    height: 26,
-                                    child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
-                                  )
-                                else
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.16),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          revealed ? Icons.visibility_off_outlined : Icons.fingerprint_rounded,
-                                          color: Colors.white,
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          revealed ? 'Hide' : 'Tap to reveal',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
+                                const SizedBox(height: 2),
+                                AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 280),
+                                  transitionBuilder: (child, a) => FadeTransition(
+                                    opacity: a,
+                                    child: SlideTransition(
+                                      position: Tween(begin: const Offset(0, 0.25), end: Offset.zero).animate(a),
+                                      child: child,
                                     ),
                                   ),
+                                  child: Text(
+                                    amount,
+                                    key: ValueKey(revealed),
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: amountSize,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: revealed ? 0.5 : 2,
+                                    ),
+                                  ),
+                                ),
+                                const Spacer(),
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            revealed && last4 != null
+                                                ? '••••  ••••  ••••  $last4'
+                                                : '••••  ••••  ••••  ••••',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 15,
+                                              letterSpacing: 1.5,
+                                              fontFeatures: [FontFeature.tabularFigures()],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            holder.toUpperCase(),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(color: Colors.white70, fontSize: 12, letterSpacing: 1.2),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (busy)
+                                      const SizedBox(
+                                        width: 26,
+                                        height: 26,
+                                        child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                                      )
+                                    else
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.16),
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            AppIcon(
+                                              revealed ? Icons.visibility_off_outlined : Icons.fingerprint_rounded,
+                                              color: Colors.white,
+                                              size: 18,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              revealed ? 'Hide' : 'Tap to reveal',
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

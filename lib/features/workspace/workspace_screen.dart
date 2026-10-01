@@ -7,6 +7,7 @@ import '../../core/api/api_client.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/permission_gate.dart';
 import '../../core/widgets/states.dart';
@@ -97,7 +98,7 @@ class WorkspaceScreen extends ConsumerWidget {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
                       Expanded(child: Text('This week', style: Theme.of(context).textTheme.titleSmall)),
-                      if (s?.canTeamReports ?? false) const Icon(Icons.chevron_right_rounded),
+                      if (s?.canTeamReports ?? false) const AppIcon(Icons.chevron_right_rounded),
                     ]),
                     const SizedBox(height: AppSpacing.sm),
                     KeyValueRow('Expected', OrgTime.hm(totals['required_seconds'] as num?)),

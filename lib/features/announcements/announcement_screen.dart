@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -81,6 +82,7 @@ class _AnnouncementScreenState extends ConsumerState<AnnouncementScreen> {
                   controller: _body, maxLength: 500, minLines: 3, maxLines: 6,
                   decoration: const InputDecoration(labelText: 'Message (optional)')),
               DropdownButtonFormField<String?>(
+                icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
                 initialValue: _teamId,
                 decoration: const InputDecoration(labelText: 'Send to'),
                 items: [
@@ -100,7 +102,7 @@ class _AnnouncementScreenState extends ConsumerState<AnnouncementScreen> {
           const SizedBox(height: AppSpacing.xl),
           FilledButton.icon(
             onPressed: _busy ? null : () => _publish(scope),
-            icon: const Icon(Icons.campaign_outlined),
+            icon: const AppIcon(Icons.campaign_outlined),
             label: const Text('Review & send'),
           ),
         ]),

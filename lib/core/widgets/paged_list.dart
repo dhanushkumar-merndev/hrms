@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import 'app_icon.dart';
 import 'states.dart';
 
 class PageResult<T> {
@@ -122,7 +123,7 @@ class PagedListState<T> extends State<PagedList<T>> {
               if (_error != null) {
                 return Center(
                   child: TextButton.icon(
-                      onPressed: _loadMore, icon: const Icon(Icons.refresh), label: const Text('Could not load more. Retry')),
+                      onPressed: _loadMore, icon: const AppIcon(Icons.refresh), label: const Text('Could not load more. Retry')),
                 );
               }
               if (_done) return const SizedBox(height: AppSpacing.xl);

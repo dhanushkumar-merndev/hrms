@@ -55,6 +55,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         ]),
       _Module('documents', 'Documents', 'Company policies and your documents.', AppColors.documentsCard, AppColors.documentsAction, 'documents', [
         ('Documents', () => go('/documents')),
+        ('Company policies', () => go('/policies')),
       ]),
       if (s?.hasWorkspace ?? false)
         _Module('workspace', 'Workspace', 'Team status, approvals and hours.', AppColors.workspaceCard, AppColors.workspaceAction, 'workspace', [
@@ -70,6 +71,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           if (s?.isAdmin ?? false) ('Offices', () => go('/admin/offices')),
           if ((s?.canMasterData ?? false) || (s?.canDraftPolicy ?? false)) ('Shifts', () => go('/admin/shifts')),
           if (s?.canDraftPolicy ?? false) ('Leave & holidays', () => go('/admin/leave-policies')),
+          if (s?.canDraftPolicy ?? false) ('Company policies', () => go('/policies')),
           if (s?.isAdmin ?? false) ('Permissions', () => go('/admin/permissions')),
           if (s?.isAdmin ?? false) ('Annual archive', () => go('/admin/archive')),
           if (s?.isAdmin ?? false) ('Google Sheet', () => go('/admin/google-sheet')),

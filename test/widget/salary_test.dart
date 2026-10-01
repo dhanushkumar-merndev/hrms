@@ -30,6 +30,7 @@ const _salary = {
     'account_holder': 'Asha Rao',
     'account_last4': '5678',
     'ifsc': 'HDFC0001234',
+    'bank_status': 'approved',
   },
   'lifetime_paid': 94500.5,
   'paid_months': 2,
@@ -39,50 +40,82 @@ const _salary = {
 };
 
 void main() {
-  testWidgets('SAL-UI-001 salary stays masked and is not even fetched until the fingerprint check passes',
-      (tester) async {
-    final auth = _FakeAuth(false);
-    final api = await pumpScreen(tester, MySalaryScreen(auth: auth),
-        session: testSession(), handler: (fn, _) => fn == 'get_my_salary' ? _salary : null);
-    expect(auth.secure, [true], reason: 'screenshots blocked on open');
-    expect(find.textContaining('45,000'), findsNothing);
-    await tester.tap(find.bySemanticsLabel(RegExp('Salary card, hidden')));
-    await tester.pumpAndSettle();
-    expect(auth.asked, 1);
-    expect(api.names, isNot(contains('get_my_salary')), reason: 'cancelled check -> nothing loaded');
-    expect(find.textContaining('45,000'), findsNothing);
-    await unmount(tester);
-    expect(auth.secure, [true, false], reason: 'screenshot block lifted on leave');
-  });
+  testWidgets(
+    'SAL-UI-001 salary stays masked and is not even fetched until the fingerprint check passes',
+    (tester) async {
+      final auth = _FakeAuth(false);
+      final api = await pumpScreen(
+        tester,
+        MySalaryScreen(auth: auth),
+        session: testSession(),
+        handler: (fn, _) => fn == 'get_my_salary' ? _salary : null,
+      );
+      expect(auth.secure, [true], reason: 'screenshots blocked on open');
+      expect(find.textContaining('45,000'), findsNothing);
+      await tester.tap(find.bySemanticsLabel(RegExp('Salary card, hidden')));
+      await tester.pumpAndSettle();
+      expect(auth.asked, 1);
+      expect(
+        api.names,
+        isNot(contains('get_my_salary')),
+        reason: 'cancelled check -> nothing loaded',
+      );
+      expect(find.textContaining('45,000'), findsNothing);
+      await unmount(tester);
+      expect(auth.secure, [
+        true,
+        false,
+      ], reason: 'screenshot block lifted on leave');
+    },
+  );
 
-  testWidgets('SAL-UI-002 reveal shows salary, bank and lifetime; Hide and app background mask it again',
-      (tester) async {
-    final auth = _FakeAuth(true);
-    await pumpScreen(tester, MySalaryScreen(auth: auth),
-        session: testSession(), handler: (fn, _) => fn == 'get_my_salary' ? _salary : null);
-    await tester.tap(find.bySemanticsLabel(RegExp('Salary card, hidden')));
-    await tester.pumpAndSettle();
-    expect(find.text('₹45,000'), findsOneWidget);
-    expect(find.text('₹94,500.50'), findsOneWidget);
-    expect(find.text('HDFC Bank'), findsWidgets);
-    expect(find.text('••••  ••••  ••••  5678'), findsOneWidget);
+  testWidgets(
+    'SAL-UI-002 reveal shows salary, bank and lifetime; Hide and app background mask it again',
+    (tester) async {
+      final auth = _FakeAuth(true);
+      await pumpScreen(
+        tester,
+        MySalaryScreen(auth: auth),
+        session: testSession(),
+        handler: (fn, _) => fn == 'get_my_salary' ? _salary : null,
+      );
+      await tester.tap(find.bySemanticsLabel(RegExp('Salary card, hidden')));
+      await tester.pumpAndSettle();
+      expect(find.text('₹45,000'), findsOneWidget);
+      expect(find.text('₹94,500.50'), findsOneWidget);
+      expect(find.text('HDFC Bank'), findsWidgets);
+      expect(find.text('••••  ••••  ••••  5678'), findsOneWidget);
+      expect(
+        find.text('Visible for 60 seconds · tap the card to hide'),
+        findsOneWidget,
+      );
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        find.text('Visible for 59 seconds · tap the card to hide'),
+        findsOneWidget,
+      );
 
-    // App goes to the background -> masked again.
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
-    // (No frames are drawn while hidden; check once the app is back.)
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pumpAndSettle();
-    expect(find.text('₹45,000'), findsNothing, reason: 'masked when the app went to the background');
+      // App goes to the background -> masked again.
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      // (No frames are drawn while hidden; check once the app is back.)
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(
+        find.text('₹45,000'),
+        findsNothing,
+        reason: 'masked when the app went to the background',
+      );
 
-    // Reveal again, then auto-hide after a minute.
-    await tester.tap(find.bySemanticsLabel(RegExp('Salary card, hidden')));
-    await tester.pumpAndSettle();
-    expect(find.text('₹45,000'), findsOneWidget);
-    await tester.pump(const Duration(seconds: 61));
-    await tester.pumpAndSettle();
-    expect(find.text('₹45,000'), findsNothing);
-    await unmount(tester);
-  });
+      // Reveal again, then auto-hide after a minute.
+      await tester.tap(find.bySemanticsLabel(RegExp('Salary card, hidden')));
+      await tester.pumpAndSettle();
+      expect(find.text('₹45,000'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 60));
+      await tester.pumpAndSettle();
+      expect(find.text('₹45,000'), findsNothing);
+      await unmount(tester);
+    },
+  );
 }

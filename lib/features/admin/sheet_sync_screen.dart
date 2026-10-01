@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -140,7 +141,7 @@ class _SheetSyncScreenState extends ConsumerState<SheetSyncScreen> {
                             Expanded(child: SelectableText(email, style: const TextStyle(fontSize: 13))),
                             IconButton(
                               tooltip: 'Copy address',
-                              icon: const Icon(Icons.copy_rounded),
+                              icon: const AppIcon(Icons.copy_rounded),
                               onPressed: () {
                                 Clipboard.setData(ClipboardData(text: email));
                                 showMessage(context, 'Address copied.');
@@ -164,7 +165,7 @@ class _SheetSyncScreenState extends ConsumerState<SheetSyncScreen> {
                         errorText: _fieldError,
                         suffixIcon: IconButton(
                           tooltip: 'Paste',
-                          icon: const Icon(Icons.content_paste_rounded),
+                          icon: const AppIcon(Icons.content_paste_rounded),
                           onPressed: () async {
                             final clip = await Clipboard.getData(Clipboard.kTextPlain);
                             if (clip?.text != null) setState(() => _link.text = clip!.text!.trim());
@@ -206,7 +207,7 @@ class _SheetSyncScreenState extends ConsumerState<SheetSyncScreen> {
                   onPressed: _busy || c['enabled'] != true || !configured ? null : _syncNow,
                   icon: _busy
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.sync_rounded),
+                      : const AppIcon(Icons.sync_rounded),
                   label: const Text('Sync now'),
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -248,7 +249,7 @@ class _StatusCard extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(icon, color: fg, size: 30),
+        AppIcon(icon, color: fg, size: 30),
         const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

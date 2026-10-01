@@ -1,3 +1,4 @@
+import '../../core/widgets/app_icon.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -411,7 +412,7 @@ class _ArchiveJobScreenState extends ConsumerState<ArchiveJobScreen> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text('Copy on this phone: ${_built!.fileName} (${formatBytes(_built!.sizeBytes)})'),
             const SizedBox(height: AppSpacing.sm),
-            OutlinedButton.icon(onPressed: _share, icon: const Icon(Icons.ios_share_rounded), label: const Text('Share / save another copy')),
+            OutlinedButton.icon(onPressed: _share, icon: const AppIcon(Icons.ios_share_rounded), label: const Text('Share / save another copy')),
             TextButton(
               onPressed: () async {
                 await ArchiveBuilder.discard(widget.id);
@@ -468,7 +469,7 @@ class _ArchiveJobScreenState extends ConsumerState<ArchiveJobScreen> {
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: building ? null : _pickBase,
-              icon: const Icon(Icons.folder_zip_outlined),
+              icon: const AppIcon(Icons.folder_zip_outlined),
               label: Text(_baseZip == null ? 'Select previous archive' : 'Selected ✓ — choose another'),
             ),
             TextButton(
@@ -504,7 +505,7 @@ class _ArchiveJobScreenState extends ConsumerState<ArchiveJobScreen> {
             ] else
               FilledButton.icon(
                 onPressed: (needsBase && _baseZip == null) ? null : () => _build(),
-                icon: const Icon(Icons.build_circle_outlined),
+                icon: const AppIcon(Icons.build_circle_outlined),
                 label: Text(_error == null ? 'Build archive' : 'Resume'),
               ),
             if (_error != null) ...[
@@ -518,7 +519,7 @@ class _ArchiveJobScreenState extends ConsumerState<ArchiveJobScreen> {
           color: built.partial ? AppColors.warningSoft : AppColors.successSoft,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Row(children: [
-              const Icon(Icons.verified_rounded, color: AppColors.success),
+              const AppIcon(Icons.verified_rounded, color: AppColors.success),
               const SizedBox(width: AppSpacing.sm),
               Expanded(child: Text(built.partial ? 'Partial archive built and verified' : 'Archive built and verified',
                   style: Theme.of(context).textTheme.titleSmall)),
@@ -528,11 +529,11 @@ class _ArchiveJobScreenState extends ConsumerState<ArchiveJobScreen> {
                 'fingerprint, spreadsheets and row counts checked.'),
             if (built.partial) Text('${built.missingIds.length} earlier file(s) are missing and listed in manifest.json.'),
             const SizedBox(height: AppSpacing.md),
-            FilledButton.tonalIcon(onPressed: _share, icon: const Icon(Icons.ios_share_rounded),
+            FilledButton.tonalIcon(onPressed: _share, icon: const AppIcon(Icons.ios_share_rounded),
                 label: const Text('Share / save to Files')),
             if (built.sizeBytes <= maxInMemorySaveBytes) ...[
               const SizedBox(height: AppSpacing.sm),
-              OutlinedButton.icon(onPressed: _saveAs, icon: const Icon(Icons.save_alt_rounded), label: const Text('Save to device')),
+              OutlinedButton.icon(onPressed: _saveAs, icon: const AppIcon(Icons.save_alt_rounded), label: const Text('Save to device')),
             ],
             CheckboxListTile(
               contentPadding: EdgeInsets.zero,
@@ -564,7 +565,7 @@ class _ArchiveJobScreenState extends ConsumerState<ArchiveJobScreen> {
         const SizedBox(height: AppSpacing.sm),
         for (final c in checks)
           Row(children: [
-            Icon(c['ok'] == true ? Icons.check_circle_rounded : Icons.cancel_rounded,
+            AppIcon(c['ok'] == true ? Icons.check_circle_rounded : Icons.cancel_rounded,
                 size: 18, color: c['ok'] == true ? AppColors.success : AppColors.error),
             const SizedBox(width: AppSpacing.sm),
             Expanded(child: Text(c['label'] as String)),

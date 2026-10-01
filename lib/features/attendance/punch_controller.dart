@@ -331,7 +331,7 @@ class PunchController extends Notifier<PunchState> {
     if (shift == null) return 'No shift is scheduled for you today.';
     return switch (shift['blocked_reason']) {
       'on_leave' => 'You are on approved leave today.',
-      'holiday' => 'Today is a company holiday.',
+      'holiday' => 'Happy holiday! No check-in or check-out is needed today.',
       'weekly_off' => 'Today is your weekly off.',
       'day_off' => 'Today is a day off for you.',
       'not_open_yet' => 'Check-in opens a little before your shift starts.',

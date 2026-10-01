@@ -36,7 +36,7 @@ void main() {
     expect(find.text('Aadhaar card'), findsOneWidget);
     expect(find.textContaining('Added by HR'), findsOneWidget);
     expect(find.byType(DocumentMenu), findsOneWidget, reason: 'HR-added document has no menu');
-    final add = tester.widget<OutlinedButton>(find.ancestor(of: find.text('Add PDF document'), matching: find.byType(OutlinedButton)));
+    final add = tester.widget<FilledButton>(find.ancestor(of: find.text('Upload PDF'), matching: find.byType(FilledButton)));
     expect(add.onPressed, isNotNull);
     await unmount(tester);
   });
@@ -47,8 +47,7 @@ void main() {
         handler: (fn, _) =>
             fn == 'list_my_documents' ? _list([for (var i = 0; i < 10; i++) _doc('$i', 'Doc $i')]) : null);
     expect(find.text('10 of 10'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('Add PDF document'), 200);
-    final add = tester.widget<OutlinedButton>(find.ancestor(of: find.text('Add PDF document'), matching: find.byType(OutlinedButton)));
+    final add = tester.widget<FilledButton>(find.ancestor(of: find.text('Upload PDF'), matching: find.byType(FilledButton)));
     expect(add.onPressed, isNull);
     expect(find.textContaining('Remove a document to add another'), findsOneWidget);
     await unmount(tester);
@@ -110,6 +109,36 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Remove'));
     await tester.pumpAndSettle();
     expect(api.calls.where((c) => c.$1 == 'remove_employee_document').single.$2, {'p_record_id': '1'});
+    await unmount(tester);
+  });
+
+  Map<String, dynamic> policies({required bool editor}) => {
+        ..._list(const []),
+        'company': [
+          {..._doc('p1', 'Leave policy 2026', mine: false), 'can_edit': editor},
+        ],
+        'can_publish_policy': editor,
+      };
+
+  testWidgets('POL-UI-001 policy editors add, rename and remove company policies', (tester) async {
+    await pumpScreen(tester, const DocumentsScreen(policiesOnly: true),
+        session: testSession(roles: const ['admin'], permissions: const ['*']),
+        handler: (fn, _) => fn == 'list_my_documents' ? policies(editor: true) : null);
+    expect(find.text('Company policies'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Add policy'), findsOneWidget);
+    expect(find.text('Leave policy 2026'), findsOneWidget);
+    expect(find.byType(DocumentMenu), findsOneWidget);
+    expect(find.text('Your documents'), findsNothing, reason: 'policies page shows policies only');
+    await unmount(tester);
+  });
+
+  testWidgets('POL-UI-002 employees only read company policies', (tester) async {
+    await pumpScreen(tester, const DocumentsScreen(policiesOnly: true),
+        session: testSession(),
+        handler: (fn, _) => fn == 'list_my_documents' ? policies(editor: false) : null);
+    expect(find.text('Leave policy 2026'), findsOneWidget);
+    expect(find.text('Add policy'), findsNothing);
+    expect(find.byType(DocumentMenu), findsNothing);
     await unmount(tester);
   });
 }

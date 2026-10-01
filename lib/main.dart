@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +10,7 @@ import 'core/api/api_exception.dart';
 import 'core/auth/secure_session_storage.dart';
 import 'core/auth/session_controller.dart';
 import 'core/push/push_service.dart';
+import 'core/widgets/app_icon.dart';
 import 'core/time/org_time.dart';
 
 Future<void> main() async {
@@ -17,6 +20,8 @@ Future<void> main() async {
     return;
   }
   OrgTime.init('Asia/Kolkata');
+  // Warm the SVG icon cache while Supabase starts, so no screen shows blank icons.
+  unawaited(precacheAppIcons());
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
     publishableKey: AppConfig.supabaseKey,

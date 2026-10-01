@@ -8,6 +8,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/pickers.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -38,7 +39,7 @@ Future<void> showTemporaryPassword(BuildContext context, {required String code, 
             ),
             TextButton.icon(
               onPressed: () => Clipboard.setData(ClipboardData(text: password)),
-              icon: const Icon(Icons.copy_rounded),
+              icon: const AppIcon(Icons.copy_rounded),
               label: const Text('Copy'),
             ),
             CheckboxListTile(
@@ -208,6 +209,7 @@ class _EmployeeNewScreenState extends ConsumerState<EmployeeNewScreen> {
               TextButton(onPressed: _suggestCode, child: const Text('Suggest')),
             ]),
             DropdownButtonFormField<String>(
+              icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
               initialValue: _role,
               decoration: const InputDecoration(labelText: 'Role'),
               items: [for (final r in roles) DropdownMenuItem(value: r.$1, child: Text(r.$2))],
@@ -220,6 +222,7 @@ class _EmployeeNewScreenState extends ConsumerState<EmployeeNewScreen> {
                 decoration: InputDecoration(labelText: 'Full name', errorText: _errors['full_name'])),
             TextField(controller: _designation, maxLength: 120, decoration: const InputDecoration(labelText: 'Designation')),
             DropdownButtonFormField<String>(
+              icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
               initialValue: _departmentId,
               decoration: InputDecoration(labelText: 'Department (optional)', errorText: _errors['department_id']),
               items: items('departments'),
@@ -231,18 +234,21 @@ class _EmployeeNewScreenState extends ConsumerState<EmployeeNewScreen> {
           const SizedBox(height: AppSpacing.lg),
           FormSection(title: 'Assignments', subtitle: 'All three are needed before the employee can punch.', children: [
             DropdownButtonFormField<String>(
+              icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
               initialValue: _teamId,
               decoration: InputDecoration(labelText: 'Team', errorText: _errors['team_id']),
               items: items('teams'),
               onChanged: (v) => setState(() => _teamId = v),
             ),
             DropdownButtonFormField<String>(
+              icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
               initialValue: _officeId,
               decoration: InputDecoration(labelText: 'Office', errorText: _errors['office_id']),
               items: items('offices'),
               onChanged: (v) => setState(() => _officeId = v),
             ),
             DropdownButtonFormField<String>(
+              icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
               initialValue: _shiftId,
               decoration: InputDecoration(labelText: 'Shift', errorText: _errors['shift_id']),
               items: items('shifts'),

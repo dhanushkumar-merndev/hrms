@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
+import '../../core/widgets/app_icon.dart';
 
 /// S02 — mandatory first password change / self-service change, and the
 /// restricted recovery view while a credential operation is pending.
@@ -138,7 +139,7 @@ class _PasswordChangeScreenState extends ConsumerState<PasswordChangeScreen> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
                   child: Row(children: [
-                    Icon(r.$2 ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                    AppIcon(r.$2 ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
                         size: 20, color: r.$2 ? AppColors.success : AppColors.textSecondary),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(child: Text(r.$1, style: Theme.of(context).textTheme.bodyMedium)),
@@ -180,7 +181,7 @@ class _Note extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(color: AppColors.attendanceCard, borderRadius: BorderRadius.circular(14)),
       child: Row(children: [
-        const Icon(Icons.shield_outlined, color: AppColors.primary),
+        const AppIcon(Icons.shield_outlined, color: AppColors.primary),
         const SizedBox(width: AppSpacing.md),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 15, color: AppColors.text))),
       ]),

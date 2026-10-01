@@ -7,6 +7,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -94,7 +95,7 @@ class _ArchiveScreenState extends ConsumerState<ArchiveScreen> {
                     const SizedBox(height: AppSpacing.sm),
                     TextButton.icon(
                       onPressed: () => context.push('/reports/hours'),
-                      icon: const Icon(Icons.table_chart_outlined),
+                      icon: const AppIcon(Icons.table_chart_outlined),
                       label: const Text('Interim Excel reports (any dates)'),
                     ),
                   ]),
@@ -161,11 +162,11 @@ class _PeriodCard extends StatelessWidget {
             ListTile(
               contentPadding: EdgeInsets.zero,
               dense: true,
-              leading: const Icon(Icons.inventory_2_outlined),
+              leading: const AppIcon(Icons.inventory_2_outlined),
               title: Text('Export r${j['revision']} · ${exportStateLabel(j).$1}'),
               subtitle: Text('${j['file_count']} files · ${formatBytes(j['total_bytes'] as num?)} · '
                   '${OrgTime.dateTime(j['created_at'])}'),
-              trailing: const Icon(Icons.chevron_right_rounded),
+              trailing: const AppIcon(Icons.chevron_right_rounded),
               onTap: () => context.push('/admin/archive/${j['id']}'),
             ),
           for (final c in cleanups.take(2))
@@ -180,13 +181,13 @@ class _PeriodCard extends StatelessWidget {
           if (closed && period['cleanup_running'] != true)
             FilledButton.icon(
               onPressed: busy ? null : onCreate,
-              icon: const Icon(Icons.archive_outlined),
+              icon: const AppIcon(Icons.archive_outlined),
               label: Text(jobs.isEmpty ? 'Create archive export' : 'Create new export'),
             ),
           if (deletedSomething)
             TextButton.icon(
               onPressed: () => context.push('/admin/archive/restore/${period['id']}'),
-              icon: const Icon(Icons.settings_backup_restore_rounded),
+              icon: const AppIcon(Icons.settings_backup_restore_rounded),
               label: const Text('Restore files from a saved archive'),
             ),
         ]),

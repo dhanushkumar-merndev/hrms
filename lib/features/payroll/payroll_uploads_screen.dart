@@ -1,3 +1,4 @@
+import '../../core/widgets/app_icon.dart';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -255,7 +256,7 @@ class _PayrollUploadsScreenState extends ConsumerState<PayrollUploadsScreen> {
                     const StatusChip('A payslip is already published for this month', tone: ChipTone.warning),
                   OutlinedButton.icon(
                     onPressed: () => openProtectedFile(context, _versionId!, 'Preview · $month · ${e?['code']}'),
-                    icon: const Icon(Icons.preview_outlined),
+                    icon: const AppIcon(Icons.preview_outlined),
                     label: const Text('Preview'),
                   ),
                   FilledButton(

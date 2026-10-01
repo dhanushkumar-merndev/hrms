@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/theme.dart';
+import 'app_icon.dart';
 
 /// One group of choices in a [showFilterSheet] (e.g. "Status").
 class FilterGroup {
@@ -26,7 +27,7 @@ class FilterButton extends StatelessWidget {
         isLabelVisible: activeCount > 0,
         label: Text('$activeCount'),
         backgroundColor: AppColors.primary,
-        child: const Icon(Icons.tune_rounded),
+        child: const AppIcon(Icons.tune_rounded),
       ),
     );
   }

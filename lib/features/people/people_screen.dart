@@ -1,3 +1,4 @@
+import '../../core/widgets/app_icon.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -59,7 +60,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
           padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.sm, AppSpacing.page, 0),
           child: TextField(
             controller: _search,
-            decoration: const InputDecoration(prefixIcon: Icon(Icons.search_rounded), hintText: 'Search name or employee ID'),
+            decoration: const InputDecoration(prefixIcon: AppIcon(Icons.search_rounded), hintText: 'Search name or employee ID'),
             onChanged: (v) {
               _debounce?.cancel();
               _debounce = Timer(const Duration(milliseconds: 300), () => setState(() => _query = v.trim()));
@@ -128,7 +129,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                 subtitle: Text(p[key] as String, style: Theme.of(ctx).textTheme.bodyLarge),
                 trailing: IconButton(
                   tooltip: 'Copy $label',
-                  icon: const Icon(Icons.copy_rounded),
+                  icon: const AppIcon(Icons.copy_rounded),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: p[key] as String));
                     Navigator.pop(ctx);
@@ -202,7 +203,7 @@ class FilterMenu extends StatelessWidget {
         for (final o in options) PopupMenuItem(value: o.$1, child: Text(o.$2)),
       ],
       child: Chip(
-        avatar: const Icon(Icons.filter_list_rounded, size: 18),
+        avatar: const AppIcon(Icons.filter_list_rounded, size: 18),
         label: Text(selected == null ? label : '$label: ${selected.$2}'),
       ),
     );

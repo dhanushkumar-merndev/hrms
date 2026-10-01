@@ -10,6 +10,7 @@ import '../../core/auth/session_controller.dart';
 import '../../core/files/save_file.dart';
 import '../../core/files/xlsx.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/paged_list.dart';
@@ -197,15 +198,14 @@ class _HoursReportScreenState extends ConsumerState<HoursReportScreen> {
             onPressed: _exporting ? null : _export,
             icon: _exporting
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.download_rounded),
+                : const AppIcon(Icons.download_rounded),
           ),
       ]),
       body: PermissionGate(
         allowed: (s) => s.canTeamReports,
         child: Column(children: [
           const OfflineBanner(),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
+          Padding(
             padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.sm, AppSpacing.page, 0),
             child: PillTabs<RangeMode>(
               options: const [
@@ -227,13 +227,13 @@ class _HoursReportScreenState extends ConsumerState<HoursReportScreen> {
           Row(children: [
             IconButton(
                 tooltip: 'Previous', onPressed: _mode == RangeMode.custom ? null : () => _shift(-1),
-                icon: const Icon(Icons.chevron_left_rounded)),
+                icon: const AppIcon(Icons.chevron_left_rounded)),
             Expanded(
               child: TextButton(onPressed: _pickCustom, child: Text(_rangeLabel, style: Theme.of(context).textTheme.titleSmall)),
             ),
             IconButton(
                 tooltip: 'Next', onPressed: _mode == RangeMode.custom ? null : () => _shift(1),
-                icon: const Icon(Icons.chevron_right_rounded)),
+                icon: const AppIcon(Icons.chevron_right_rounded)),
           ]),
           if (widget.employeeId == null)
             SingleChildScrollView(
@@ -296,7 +296,13 @@ class _TotalsCard extends StatelessWidget {
     Widget stat(String label, Object? seconds, [Color? color]) => Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(label, style: Theme.of(context).textTheme.bodySmall),
-            Text(OrgTime.hm(seconds as num?), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: color)),
+            // One line per total: long values ("134 h 59 min") shrink instead of wrapping.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(OrgTime.hm(seconds as num?),
+                  maxLines: 1, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: color)),
+            ),
           ]),
         );
     return Padding(

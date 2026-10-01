@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/theme.dart';
 import '../api/api_exception.dart';
+import 'app_icon.dart';
 
 /// Renders an AsyncValue with distinct loading, empty, error, offline and
 /// unauthorized states (design.md §4: never conflate "no rows" with failure).
@@ -53,7 +54,7 @@ class ErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(offline ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
+            AppIcon(offline ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
                 size: 44, color: offline ? AppColors.warning : AppColors.error),
             const SizedBox(height: AppSpacing.md),
             Text(offline ? 'You are offline' : 'Could not load this',
@@ -67,7 +68,7 @@ class ErrorState extends StatelessWidget {
             ],
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.lg),
-              OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: const Text('Try again')),
+              OutlinedButton.icon(onPressed: onRetry, icon: const AppIcon(Icons.refresh), label: const Text('Try again')),
             ],
           ],
         ),
@@ -88,7 +89,7 @@ class EmptyState extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 44, color: AppColors.textSecondary),
+          AppIcon(icon, size: 44, color: AppColors.textSecondary),
           const SizedBox(height: AppSpacing.md),
           Text(title, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
           if (message != null) ...[
@@ -162,7 +163,7 @@ class OfflineBanner extends ConsumerWidget {
         color: AppColors.warningSoft,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.page, vertical: AppSpacing.sm),
         child: const Row(children: [
-          Icon(Icons.wifi_off_rounded, size: 18, color: AppColors.warning),
+          AppIcon(Icons.wifi_off_rounded, size: 18, color: AppColors.warning),
           SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text('Offline — showing saved information. Actions need a connection.',

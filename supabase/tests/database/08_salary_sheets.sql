@@ -43,28 +43,25 @@ select test.throws(format('select public.get_employee_salary(%L)', test.emp('EMP
 select test.throws(format('select public.set_payslip_amount(%L, %L, 100)', test.emp('EMP01'), date '2026-09-01'),
   'ACCESS_DENIED', 'SAL-001 manager cannot set paid amounts');
 
--- SAL-002 HR with the payroll grant sets salary + bank; bad input is rejected.
+-- SAL-002 HR with the payroll grant sets salary. Bank details are employee
+-- submitted and approved through the separate proof-backed request flow.
 select test.login('HR01');
 select test.throws(format($q$select public.set_employee_salary(%L, '{"monthly_salary": "abc"}', null, 0)$q$, test.emp('EMP01')),
   'VALIDATION_FAILED', 'SAL-002 non-numeric salary rejected');
-select test.throws(format($q$select public.set_employee_salary(%L, '{"ifsc": "HDFC123"}', null, 0)$q$, test.emp('EMP01')),
-  'VALIDATION_FAILED', 'SAL-002 malformed IFSC rejected');
 create temporary table s1 as select public.set_employee_salary(test.emp('EMP01'),
-  '{"monthly_salary": 45000, "effective_from": "2026-04-01", "bank_name": "HDFC Bank", "account_holder": "Employee E1",
-    "account_last4": "000012345678", "ifsc": "hdfc0001234"}'::jsonb, null, 0) as r;
+  '{"monthly_salary": 45000, "effective_from": "2026-04-01"}'::jsonb, null, 0) as r;
 grant select on s1 to authenticated, service_role;
 select test.eq((select (r -> 'data' -> 'profile' ->> 'monthly_salary')::numeric from s1), 45000::numeric,
   'SAL-002 salary saved');
-select test.eq((select r -> 'data' -> 'profile' ->> 'account_last4' from s1), '5678',
-  'SAL-002 only the last four account digits are kept');
-select test.eq((select r -> 'data' -> 'profile' ->> 'ifsc' from s1), 'HDFC0001234', 'SAL-002 IFSC normalised');
+select test.throws(format($q$select public.set_employee_salary(%L, '{"bank_name":"HDFC Bank","account_last4":"5678","ifsc":"HDFC0001234"}', null, 2)$q$,
+  test.emp('EMP01')), 'REQUEST_REQUIRED', 'SAL-002 direct bank edit is blocked');
 select test.throws(format($q$select public.set_employee_salary(%L, '{"monthly_salary": 50000}', null, 1)$q$, test.emp('EMP01')),
   'STALE_VERSION', 'SAL-002 stale version rejected');
 select test.throws(format($q$select public.set_employee_salary(%L, '{"monthly_salary": 50000}', null, 2)$q$, test.emp('EMP01')),
   'VALIDATION_FAILED', 'SAL-002 changing an existing amount needs a reason');
 select test.eq((public.set_employee_salary(test.emp('EMP01'), '{"monthly_salary": 50000}', 'Annual revision', 2)
                 -> 'data' -> 'profile' ->> 'monthly_salary')::numeric, 50000::numeric, 'SAL-002 revision with reason');
-select test.eq((public.set_employee_salary(test.emp('EMP01'), '{"monthly_salary": 50000, "bank_name": "HDFC Bank"}', null, 3)
+select test.eq((public.set_employee_salary(test.emp('EMP01'), '{"monthly_salary": 50000}', null, 3)
                 -> 'data' ->> 'unchanged')::boolean, true, 'SAL-002 re-import of identical values is a no-op');
 select test.eq((public.get_employee_salary(test.emp('EMP01')) ->> 'version')::integer, 3, 'SAL-002 no-op keeps the version');
 select test.throws(format($q$select public.set_employee_salary(%L, '{"monthly_salary": 99}', 'x', 0)$q$, test.emp('HR01')),
@@ -81,7 +78,8 @@ select test.eq(jsonb_array_length(public.get_employee_salary(test.emp('EMP01')) 
 select test.login('EMP01');
 select test.eq((public.get_my_salary() -> 'data' ->> 'lifetime_paid')::numeric, 94500.50::numeric,
   'SAL-004 lifetime paid = sum of published payslip amounts');
-select test.eq((public.get_my_salary() -> 'data' -> 'profile' ->> 'bank_name'), 'HDFC Bank', 'SAL-004 own bank shown');
+select test.eq((public.get_my_salary() -> 'data' -> 'profile' ->> 'bank_status'), 'not_set',
+  'SAL-004 bank remains unset until employee approval');
 select test.login('EMP02');
 select test.eq((public.get_my_salary() -> 'data' -> 'profile'), 'null'::jsonb, 'SAL-004 others see nothing of EMP01');
 select test.eq((public.get_my_salary() -> 'data' ->> 'lifetime_paid')::numeric, 0::numeric, 'SAL-004 zero when nothing paid');
@@ -112,6 +110,16 @@ select test.throws($q$select public.set_sheet_sync('1AbCdEfGhIjKlMnOpQrStUvWxYz0
 select pg_temp.reauth('ADMIN01', 'export.bulk_salary');
 select test.eq((public.set_sheet_sync('1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789', true, true, 2)
                 -> 'data' ->> 'include_salary')::boolean, true, 'SHEET-003 salary tab on after reauthentication');
+
+-- Approved bank data is exported masked. The dedicated bank-request suite
+-- tests the workflow; this is a focused export fixture.
+select test.as_admin_db();
+select set_config('hrms.bank_approval_apply', 'on', true);
+update hrms.salary_profiles set bank_name = 'HDFC Bank', account_holder = 'Employee E1',
+  account_last4 = '5678', ifsc = 'HDFC0001234', bank_status = 'approved'
+where employee_id = test.emp('EMP01');
+select set_config('hrms.bank_approval_apply', 'off', true);
+select test.login('ADMIN01');
 
 -- SHEET-004 export: service only; tabs present; salary masked; no formulas.
 select test.throws(format('select public.internal_sheet_export(%L)', test.org('TEST_ORG')), 'permission denied',

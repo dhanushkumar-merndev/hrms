@@ -6,6 +6,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/location/location_service.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
@@ -30,7 +31,7 @@ class OfficesScreen extends ConsumerWidget {
       floatingActionButton: (ref.watch(sessionContextProvider)?.isAdmin ?? false)
           ? FloatingActionButton.extended(
               onPressed: () => _openEditor(context, ref, null),
-              icon: const Icon(Icons.add_location_alt_outlined),
+              icon: const AppIcon(Icons.add_location_alt_outlined),
               label: const Text('Add office'),
             )
           : null,
@@ -209,7 +210,7 @@ class _OfficeEditorState extends ConsumerState<OfficeEditor> {
             const SizedBox(height: AppSpacing.sm),
             OutlinedButton.icon(
               onPressed: _busy ? null : _useCurrentLocation,
-              icon: const Icon(Icons.my_location_rounded),
+              icon: const AppIcon(Icons.my_location_rounded),
               label: const Text('Use my current location'),
             ),
             if (_fix != null) Text(_fix!, style: Theme.of(context).textTheme.bodySmall),
@@ -252,6 +253,7 @@ class _OfficeEditorState extends ConsumerState<OfficeEditor> {
                 '4. Mark the office verified once check-ins succeed reliably. GPS can drift; no setting makes it perfect.'),
             const SizedBox(height: AppSpacing.md),
             DropdownButtonFormField<String>(
+              icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
               initialValue: _calibration,
               decoration: const InputDecoration(labelText: 'Site test status'),
               items: const [

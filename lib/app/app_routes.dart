@@ -27,6 +27,7 @@ import '../features/payroll/payroll_uploads_screen.dart';
 import '../features/admin/sheet_sync_screen.dart';
 import '../features/employees/employee_import_screen.dart';
 import '../features/payslips/payslips_screen.dart';
+import '../features/salary/bank_details_request_screen.dart';
 import '../features/salary/my_salary_screen.dart';
 import '../features/people/people_screen.dart';
 import '../features/people/profile_screen.dart';
@@ -42,7 +43,8 @@ import 'material_route.dart';
 final List<RouteBase> featureRoutes = [
   AppRoute(
     path: '/attendance',
-    builder: (_, s) => AttendanceScreen(filter: s.uri.queryParameters['filter']),
+    builder: (_, s) =>
+        AttendanceScreen(filter: s.uri.queryParameters['filter']),
     routes: [
       AppRoute(
         path: 'day',
@@ -55,8 +57,10 @@ final List<RouteBase> featureRoutes = [
   ),
   AppRoute(
     path: '/corrections/new',
-    builder: (_, s) =>
-        CorrectionScreen(date: s.uri.queryParameters['date'], editRequestId: s.uri.queryParameters['edit']),
+    builder: (_, s) => CorrectionScreen(
+      date: s.uri.queryParameters['date'],
+      editRequestId: s.uri.queryParameters['edit'],
+    ),
   ),
   AppRoute(path: '/requests', builder: (_, _) => const MyRequestsScreen()),
   AppRoute(
@@ -66,15 +70,28 @@ final List<RouteBase> featureRoutes = [
   AppRoute(path: '/leave', builder: (_, _) => const LeaveScreen()),
   AppRoute(
     path: '/leave/apply',
-    builder: (_, s) => LeaveApplyScreen(editRequestId: s.uri.queryParameters['edit']),
+    builder: (_, s) =>
+        LeaveApplyScreen(editRequestId: s.uri.queryParameters['edit']),
   ),
   AppRoute(path: '/holidays', builder: (_, _) => const HolidaysScreen()),
   AppRoute(path: '/payslips', builder: (_, _) => const PayslipsScreen()),
   AppRoute(path: '/salary', builder: (_, _) => const MySalaryScreen()),
+  AppRoute(
+    path: '/salary/bank-details',
+    builder: (_, s) =>
+        BankDetailsRequestScreen(editRequestId: s.uri.queryParameters['edit']),
+  ),
   AppRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
   AppRoute(path: '/people', builder: (_, _) => const PeopleScreen()),
   AppRoute(path: '/documents', builder: (_, _) => const DocumentsScreen()),
-  AppRoute(path: '/notifications', builder: (_, _) => const NotificationsScreen()),
+  AppRoute(
+    path: '/policies',
+    builder: (_, _) => const DocumentsScreen(policiesOnly: true),
+  ),
+  AppRoute(
+    path: '/notifications',
+    builder: (_, _) => const NotificationsScreen(),
+  ),
   AppRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
   AppRoute(path: '/workspace', builder: (_, _) => const WorkspaceScreen()),
   AppRoute(path: '/approvals', builder: (_, _) => const ApprovalsScreen()),
@@ -84,7 +101,8 @@ final List<RouteBase> featureRoutes = [
   ),
   AppRoute(
     path: '/reports/hours',
-    builder: (_, s) => HoursReportScreen(employeeId: s.uri.queryParameters['employee']),
+    builder: (_, s) =>
+        HoursReportScreen(employeeId: s.uri.queryParameters['employee']),
   ),
   AppRoute(
     path: '/employees',
@@ -100,27 +118,42 @@ final List<RouteBase> featureRoutes = [
   ),
   AppRoute(
     path: '/payroll/uploads',
-    builder: (_, s) => PayrollUploadsScreen(employeeId: s.uri.queryParameters['employee']),
+    builder: (_, s) =>
+        PayrollUploadsScreen(employeeId: s.uri.queryParameters['employee']),
   ),
-  AppRoute(path: '/announcements/new', builder: (_, _) => const AnnouncementScreen()),
-  AppRoute(path: '/admin/organization', builder: (_, _) => const OrganizationScreen()),
+  AppRoute(
+    path: '/announcements/new',
+    builder: (_, _) => const AnnouncementScreen(),
+  ),
+  AppRoute(
+    path: '/admin/organization',
+    builder: (_, _) => const OrganizationScreen(),
+  ),
   AppRoute(path: '/admin/teams', builder: (_, _) => const TeamsScreen()),
   AppRoute(path: '/admin/offices', builder: (_, _) => const OfficesScreen()),
   AppRoute(path: '/admin/shifts', builder: (_, _) => const ShiftsScreen()),
   AppRoute(
     path: '/admin/leave-policies',
-    builder: (_, s) => LeavePoliciesScreen(initialTab: s.uri.queryParameters['tab']),
+    builder: (_, s) =>
+        LeavePoliciesScreen(initialTab: s.uri.queryParameters['tab']),
   ),
-  AppRoute(path: '/admin/permissions', builder: (_, _) => const PermissionsScreen()),
+  AppRoute(
+    path: '/admin/permissions',
+    builder: (_, _) => const PermissionsScreen(),
+  ),
   AppRoute(path: '/admin/audit', builder: (_, _) => const AuditScreen()),
-  AppRoute(path: '/admin/google-sheet', builder: (_, _) => const SheetSyncScreen()),
+  AppRoute(
+    path: '/admin/google-sheet',
+    builder: (_, _) => const SheetSyncScreen(),
+  ),
   AppRoute(
     path: '/admin/archive',
     builder: (_, _) => const ArchiveScreen(),
     routes: [
       AppRoute(
         path: 'restore/:periodId',
-        builder: (_, s) => ArchiveRestoreScreen(periodId: s.pathParameters['periodId']!),
+        builder: (_, s) =>
+            ArchiveRestoreScreen(periodId: s.pathParameters['periodId']!),
       ),
       AppRoute(
         path: ':id',
