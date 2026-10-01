@@ -34,16 +34,17 @@ import '../features/reports/hours_report_screen.dart';
 import '../features/requests/my_requests_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/workspace/workspace_screen.dart';
+import 'material_route.dart';
 
 /// Feature screens beyond the core shell (S07–S38). Route guards are UX only:
 /// every screen re-reads permissions and the server authorises each call.
 /// Deep links carry ids only; details are re-fetched with current access.
 final List<RouteBase> featureRoutes = [
-  GoRoute(
+  AppRoute(
     path: '/attendance',
     builder: (_, s) => AttendanceScreen(filter: s.uri.queryParameters['filter']),
     routes: [
-      GoRoute(
+      AppRoute(
         path: 'day',
         builder: (_, s) => AttendanceDayScreen(
           date: s.uri.queryParameters['date'] ?? '',
@@ -52,76 +53,76 @@ final List<RouteBase> featureRoutes = [
       ),
     ],
   ),
-  GoRoute(
+  AppRoute(
     path: '/corrections/new',
     builder: (_, s) =>
         CorrectionScreen(date: s.uri.queryParameters['date'], editRequestId: s.uri.queryParameters['edit']),
   ),
-  GoRoute(path: '/requests', builder: (_, _) => const MyRequestsScreen()),
-  GoRoute(
+  AppRoute(path: '/requests', builder: (_, _) => const MyRequestsScreen()),
+  AppRoute(
     path: '/requests/:id',
     builder: (_, s) => RequestDetailScreen(id: s.pathParameters['id']!),
   ),
-  GoRoute(path: '/leave', builder: (_, _) => const LeaveScreen()),
-  GoRoute(
+  AppRoute(path: '/leave', builder: (_, _) => const LeaveScreen()),
+  AppRoute(
     path: '/leave/apply',
     builder: (_, s) => LeaveApplyScreen(editRequestId: s.uri.queryParameters['edit']),
   ),
-  GoRoute(path: '/holidays', builder: (_, _) => const HolidaysScreen()),
-  GoRoute(path: '/payslips', builder: (_, _) => const PayslipsScreen()),
-  GoRoute(path: '/salary', builder: (_, _) => const MySalaryScreen()),
-  GoRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
-  GoRoute(path: '/people', builder: (_, _) => const PeopleScreen()),
-  GoRoute(path: '/documents', builder: (_, _) => const DocumentsScreen()),
-  GoRoute(path: '/notifications', builder: (_, _) => const NotificationsScreen()),
-  GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
-  GoRoute(path: '/workspace', builder: (_, _) => const WorkspaceScreen()),
-  GoRoute(path: '/approvals', builder: (_, _) => const ApprovalsScreen()),
-  GoRoute(
+  AppRoute(path: '/holidays', builder: (_, _) => const HolidaysScreen()),
+  AppRoute(path: '/payslips', builder: (_, _) => const PayslipsScreen()),
+  AppRoute(path: '/salary', builder: (_, _) => const MySalaryScreen()),
+  AppRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+  AppRoute(path: '/people', builder: (_, _) => const PeopleScreen()),
+  AppRoute(path: '/documents', builder: (_, _) => const DocumentsScreen()),
+  AppRoute(path: '/notifications', builder: (_, _) => const NotificationsScreen()),
+  AppRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
+  AppRoute(path: '/workspace', builder: (_, _) => const WorkspaceScreen()),
+  AppRoute(path: '/approvals', builder: (_, _) => const ApprovalsScreen()),
+  AppRoute(
     path: '/approvals/:id',
     builder: (_, s) => ApprovalDetailScreen(id: s.pathParameters['id']!),
   ),
-  GoRoute(
+  AppRoute(
     path: '/reports/hours',
     builder: (_, s) => HoursReportScreen(employeeId: s.uri.queryParameters['employee']),
   ),
-  GoRoute(
+  AppRoute(
     path: '/employees',
     builder: (_, _) => const EmployeesScreen(),
     routes: [
-      GoRoute(path: 'new', builder: (_, _) => const EmployeeNewScreen()),
-      GoRoute(path: 'import', builder: (_, _) => const EmployeeImportScreen()),
-      GoRoute(
+      AppRoute(path: 'new', builder: (_, _) => const EmployeeNewScreen()),
+      AppRoute(path: 'import', builder: (_, _) => const EmployeeImportScreen()),
+      AppRoute(
         path: ':id',
         builder: (_, s) => EmployeeDetailScreen(id: s.pathParameters['id']!),
       ),
     ],
   ),
-  GoRoute(
+  AppRoute(
     path: '/payroll/uploads',
     builder: (_, s) => PayrollUploadsScreen(employeeId: s.uri.queryParameters['employee']),
   ),
-  GoRoute(path: '/announcements/new', builder: (_, _) => const AnnouncementScreen()),
-  GoRoute(path: '/admin/organization', builder: (_, _) => const OrganizationScreen()),
-  GoRoute(path: '/admin/teams', builder: (_, _) => const TeamsScreen()),
-  GoRoute(path: '/admin/offices', builder: (_, _) => const OfficesScreen()),
-  GoRoute(path: '/admin/shifts', builder: (_, _) => const ShiftsScreen()),
-  GoRoute(
+  AppRoute(path: '/announcements/new', builder: (_, _) => const AnnouncementScreen()),
+  AppRoute(path: '/admin/organization', builder: (_, _) => const OrganizationScreen()),
+  AppRoute(path: '/admin/teams', builder: (_, _) => const TeamsScreen()),
+  AppRoute(path: '/admin/offices', builder: (_, _) => const OfficesScreen()),
+  AppRoute(path: '/admin/shifts', builder: (_, _) => const ShiftsScreen()),
+  AppRoute(
     path: '/admin/leave-policies',
     builder: (_, s) => LeavePoliciesScreen(initialTab: s.uri.queryParameters['tab']),
   ),
-  GoRoute(path: '/admin/permissions', builder: (_, _) => const PermissionsScreen()),
-  GoRoute(path: '/admin/audit', builder: (_, _) => const AuditScreen()),
-  GoRoute(path: '/admin/google-sheet', builder: (_, _) => const SheetSyncScreen()),
-  GoRoute(
+  AppRoute(path: '/admin/permissions', builder: (_, _) => const PermissionsScreen()),
+  AppRoute(path: '/admin/audit', builder: (_, _) => const AuditScreen()),
+  AppRoute(path: '/admin/google-sheet', builder: (_, _) => const SheetSyncScreen()),
+  AppRoute(
     path: '/admin/archive',
     builder: (_, _) => const ArchiveScreen(),
     routes: [
-      GoRoute(
+      AppRoute(
         path: 'restore/:periodId',
         builder: (_, s) => ArchiveRestoreScreen(periodId: s.pathParameters['periodId']!),
       ),
-      GoRoute(
+      AppRoute(
         path: ':id',
         builder: (_, s) => ArchiveJobScreen(id: s.pathParameters['id']!),
       ),

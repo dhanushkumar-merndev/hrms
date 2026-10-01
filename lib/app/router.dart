@@ -11,6 +11,7 @@ import '../features/auth/splash_screen.dart';
 import '../features/explore/explore_screen.dart';
 import '../features/home/home_screen.dart';
 import 'app_routes.dart';
+import 'material_route.dart';
 import 'shell.dart';
 
 /// Route guards are UX only — every query and action is authorised by the
@@ -44,24 +45,24 @@ final routerProvider = Provider<GoRouter>((ref) {
           return null;
       }
     },
-    errorBuilder: (context, state) => NotAvailableScreen(path: state.uri.path),
+    errorPageBuilder: (context, state) => materialPage(state, NotAvailableScreen(path: state.uri.path)),
     routes: [
-      GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
-      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
-      GoRoute(path: '/password-change', builder: (_, _) => const PasswordChangeScreen()),
+      AppRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      AppRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      AppRoute(path: '/password-change', builder: (_, _) => const PasswordChangeScreen()),
       // Tabs live in a swipeable PageView; all three are preloaded so a swipe
       // never lands on an empty page.
       StatefulShellRoute(
-        builder: (context, state, shell) => AppShell(shell: shell),
+        pageBuilder: (context, state, shell) => materialPage(state, AppShell(shell: shell)),
         navigatorContainerBuilder: (context, shell, children) => SwipeTabs(shell: shell, children: children),
         branches: [
-          StatefulShellBranch(preload: true, routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
-          StatefulShellBranch(preload: true, routes: [GoRoute(path: '/action', builder: (_, _) => const ActionScreen())]),
-          StatefulShellBranch(preload: true, routes: [GoRoute(path: '/explore', builder: (_, _) => const ExploreScreen())]),
+          StatefulShellBranch(preload: true, routes: [AppRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
+          StatefulShellBranch(preload: true, routes: [AppRoute(path: '/action', builder: (_, _) => const ActionScreen())]),
+          StatefulShellBranch(preload: true, routes: [AppRoute(path: '/explore', builder: (_, _) => const ExploreScreen())]),
         ],
       ),
-      GoRoute(path: '/punch', builder: (_, _) => const PunchScreen()),
-      GoRoute(path: '/settings/password', builder: (_, _) => const PasswordChangeScreen(voluntary: true)),
+      AppRoute(path: '/punch', builder: (_, _) => const PunchScreen()),
+      AppRoute(path: '/settings/password', builder: (_, _) => const PasswordChangeScreen(voluntary: true)),
       ...featureRoutes,
     ],
   );
