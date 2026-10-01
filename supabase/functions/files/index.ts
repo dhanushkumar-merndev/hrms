@@ -10,6 +10,7 @@ import { actorParams, requireCaller, rpc, serviceClient } from "../_shared/supab
 
 const ALLOWED: Record<string, string[]> = {
   payslip: ["application/pdf"],
+  employee_document: ["application/pdf"],
   avatar: ["image/jpeg", "image/png", "image/webp"],
 };
 const DEFAULT_ALLOWED = ["application/pdf", "image/jpeg", "image/png"];

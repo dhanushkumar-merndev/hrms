@@ -72,13 +72,15 @@ if [[ "$MODE" == "all" || "$MODE" == "--functions-only" ]]; then
     echo "HRMS_MAINTENANCE_SECRET=$HRMS_MAINTENANCE_SECRET"
     [[ -n "${HRMS_FCM_SERVICE_ACCOUNT_B64:-}" ]] && echo "HRMS_FCM_SERVICE_ACCOUNT_B64=$HRMS_FCM_SERVICE_ACCOUNT_B64"
     [[ -n "${HRMS_ANDROID_CERT_SHA256:-}" ]] && echo "HRMS_ANDROID_CERT_SHA256=$HRMS_ANDROID_CERT_SHA256"
+    [[ -n "${HRMS_SHEETS_SERVICE_ACCOUNT_B64:-}" ]] && echo "HRMS_SHEETS_SERVICE_ACCOUNT_B64=$HRMS_SHEETS_SERVICE_ACCOUNT_B64"
     true
   } > "$SECRETS"
   "${SB[@]}" secrets set --project-ref "$SUPABASE_PROJECT_REF" --env-file "$SECRETS" 2>&1 | redact | tail -3
   rm -f "$SECRETS"
 
   echo "== Deploying Edge Functions"
-  for fn in auth-login auth-password auth-reauth admin-users device-register punch files maintenance; do
+  for fn in auth-login auth-password auth-reauth admin-users device-register punch files maintenance archive \
+            holiday-suggestions sheets-sync; do
     "${SB[@]}" functions deploy "$fn" --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt --use-api 2>&1 | redact | tail -1
   done
 fi

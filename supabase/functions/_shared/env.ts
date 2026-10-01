@@ -55,3 +55,6 @@ export const ANDROID_CERT_DIGESTS = envOr("HRMS_ANDROID_CERT_SHA256")
 
 export const MAINTENANCE_SECRET = envOr("HRMS_MAINTENANCE_SECRET");
 export const FCM_SERVICE_ACCOUNT_B64 = envOr("HRMS_FCM_SERVICE_ACCOUNT_B64");
+/** Service account for the Google Sheets mirror; falls back to the push
+ * (Firebase) account when the same Google Cloud project is used for both. */
+export const SHEETS_SERVICE_ACCOUNT_B64 = envOr("HRMS_SHEETS_SERVICE_ACCOUNT_B64") || FCM_SERVICE_ACCOUNT_B64;

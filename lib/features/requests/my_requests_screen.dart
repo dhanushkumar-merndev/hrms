@@ -8,6 +8,7 @@ import '../../core/api/api_exception.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/states.dart';
+import '../../core/widgets/pill_tabs.dart';
 import '../files/file_viewer_screen.dart';
 import '../home/home_providers.dart';
 import 'request_widgets.dart';
@@ -40,11 +41,12 @@ class _MyRequestsScreenState extends ConsumerState<MyRequestsScreen> {
       body: Column(children: [
         const OfflineBanner(),
         Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.sm, AppSpacing.page, 0),
-          child: Wrap(spacing: AppSpacing.sm, children: [
-            for (final k in const [(null, 'All'), ('leave', 'Leave'), ('correction', 'Corrections')])
-              ChoiceChip(label: Text(k.$2), selected: _kind == k.$1, onSelected: (_) => setState(() => _kind = k.$1)),
-          ]),
+          padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.page, AppSpacing.page, 0),
+          child: PillTabs<String?>(
+            options: const [(null, 'All'), ('leave', 'Leave'), ('correction', 'Corrections')],
+            value: _kind,
+            onChanged: (v) => setState(() => _kind = v),
+          ),
         ),
         Expanded(
           child: RefreshIndicator(

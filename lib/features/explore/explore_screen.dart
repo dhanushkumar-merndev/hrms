@@ -29,7 +29,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       _Module('attendance', 'Attendance', 'Manage your attendance.', AppColors.attendanceCard, AppColors.attendanceAction, 'attendance', [
         ('Check in / out', () => go('/punch')),
         ('Attendance', () => go('/attendance')),
-        ('Regularize', () => go('/corrections/new')),
+        ('Fix a punch', () => go('/corrections/new')),
       ]),
       _Module('leave', 'Leave', 'Check and apply for leaves.', AppColors.leaveCard, AppColors.leaveAction, 'leave', [
         ('Apply Leave', () => go('/leave/apply')),
@@ -38,6 +38,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         ('My Requests', () => go('/requests')),
       ]),
       _Module('salary', 'Salary', 'Your published payslips.', AppColors.salaryCard, AppColors.salaryAction, 'salary', [
+        ('My salary', () => go('/salary')),
         ('Payslips', () => go('/payslips')),
         if (s?.canManagePayroll ?? false) ('Payroll uploads', () => go('/payroll/uploads')),
       ]),
@@ -45,6 +46,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         ('My Profile', () => go('/profile')),
         ('My Workmates', () => go('/people')),
         if (s?.canViewEmployees ?? false) ('Employees', () => go('/employees')),
+        if ((s?.canProvision ?? false) || (s?.canManagePayroll ?? false)) ('Import from Excel', () => go('/employees/import')),
+        ('Settings', () => go('/settings')),
       ]),
       if (s?.canReview ?? false)
         _Module('todo', 'To Do', 'Review pending items.', AppColors.approvalsCard, AppColors.approvalsAction, 'todo', [
@@ -69,6 +72,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           if (s?.canDraftPolicy ?? false) ('Leave & holidays', () => go('/admin/leave-policies')),
           if (s?.isAdmin ?? false) ('Permissions', () => go('/admin/permissions')),
           if (s?.isAdmin ?? false) ('Annual archive', () => go('/admin/archive')),
+          if (s?.isAdmin ?? false) ('Google Sheet', () => go('/admin/google-sheet')),
         ]),
     ];
 

@@ -9,9 +9,9 @@ import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/states.dart';
 import 'file_service.dart';
 
-Future<void> openProtectedFile(BuildContext context, String fileVersionId, String title) {
+Future<void> openProtectedFile(BuildContext context, String fileVersionId, String title, {String purpose = 'view'}) {
   return Navigator.of(context).push(MaterialPageRoute(
-    builder: (_) => FileViewerScreen(fileVersionId: fileVersionId, title: title),
+    builder: (_) => FileViewerScreen(fileVersionId: fileVersionId, title: title, purpose: purpose),
   ));
 }
 
@@ -19,9 +19,12 @@ Future<void> openProtectedFile(BuildContext context, String fileVersionId, Strin
 /// link and held in memory only. The viewer closes when the app goes to the
 /// background. Saving creates the user's own local copy on request.
 class FileViewerScreen extends ConsumerStatefulWidget {
-  const FileViewerScreen({super.key, required this.fileVersionId, required this.title});
+  const FileViewerScreen({super.key, required this.fileVersionId, required this.title, this.purpose = 'view'});
   final String fileVersionId;
   final String title;
+
+  /// Audited access purpose: view | download | review.
+  final String purpose;
 
   @override
   ConsumerState<FileViewerScreen> createState() => _FileViewerScreenState();
@@ -45,7 +48,7 @@ class _FileViewerScreenState extends ConsumerState<FileViewerScreen> {
   Future<void> _load() async {
     setState(() => _error = null);
     try {
-      final f = await ref.read(fileServiceProvider).fetch(widget.fileVersionId);
+      final f = await ref.read(fileServiceProvider).fetch(widget.fileVersionId, purpose: widget.purpose);
       if (!mounted) return;
       setState(() {
         _file = f;

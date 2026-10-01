@@ -17,7 +17,11 @@ import 'shell.dart';
 /// server. Guards route by the server-derived session phase.
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
-  ref.listen(sessionProvider, (_, _) => refresh.value++);
+  // Only a PHASE change can change a redirect. Refreshing on every session
+  // update (e.g. the periodic permission refresh) made go_router rebuild its
+  // pages while a screen was open, which dropped push() results, so lists
+  // never reloaded after returning from a detail screen.
+  ref.listen(sessionProvider.select((s) => s.phase), (_, _) => refresh.value++);
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
@@ -45,12 +49,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/password-change', builder: (_, _) => const PasswordChangeScreen()),
-      StatefulShellRoute.indexedStack(
+      // Tabs live in a swipeable PageView; all three are preloaded so a swipe
+      // never lands on an empty page.
+      StatefulShellRoute(
         builder: (context, state, shell) => AppShell(shell: shell),
+        navigatorContainerBuilder: (context, shell, children) => SwipeTabs(shell: shell, children: children),
         branches: [
-          StatefulShellBranch(routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/action', builder: (_, _) => const ActionScreen())]),
-          StatefulShellBranch(routes: [GoRoute(path: '/explore', builder: (_, _) => const ExploreScreen())]),
+          StatefulShellBranch(preload: true, routes: [GoRoute(path: '/home', builder: (_, _) => const HomeScreen())]),
+          StatefulShellBranch(preload: true, routes: [GoRoute(path: '/action', builder: (_, _) => const ActionScreen())]),
+          StatefulShellBranch(preload: true, routes: [GoRoute(path: '/explore', builder: (_, _) => const ExploreScreen())]),
         ],
       ),
       GoRoute(path: '/punch', builder: (_, _) => const PunchScreen()),

@@ -1,5 +1,6 @@
-import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
+
+import '../core/widgets/slide_page_transition.dart';
 
 /// Design tokens from design.md §2 (approximations of the references with
 /// accessible contrast). Light theme only for now; dark mode is deferred.
@@ -136,11 +137,62 @@ ThemeData buildTheme() {
             color: states.contains(WidgetState.selected) ? AppColors.primary : AppColors.textSecondary,
           )),
     ),
-    chipTheme: const ChipThemeData(side: BorderSide(color: AppColors.border)),
+    // Chips: rounded pills, no check mark; the selected one is solid.
+    chipTheme: ChipThemeData(
+      showCheckmark: false,
+      shape: const StadiumBorder(),
+      side: WidgetStateBorderSide.resolveWith((states) => BorderSide(
+          color: states.contains(WidgetState.selected) ? AppColors.primary : AppColors.border)),
+      color: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected) ? AppColors.primary : AppColors.surface),
+      labelStyle: TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: WidgetStateColor.resolveWith(
+            (states) => states.contains(WidgetState.selected) ? Colors.white : AppColors.textSecondary),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    ),
+    // Dialogs and sheets on plain white (no lavender tint) so controls and
+    // fields inside them keep their contrast.
+    dialogTheme: const DialogThemeData(backgroundColor: AppColors.surface, surfaceTintColor: Colors.transparent),
+    timePickerTheme: const TimePickerThemeData(backgroundColor: AppColors.surface),
+    datePickerTheme: const DatePickerThemeData(
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      headerBackgroundColor: AppColors.attendanceCard,
+      headerForegroundColor: AppColors.text,
+    ),
+    popupMenuTheme: const PopupMenuThemeData(color: AppColors.surface, surfaceTintColor: Colors.transparent),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      showDragHandle: true,
+    ),
+    // Top tabs: a soft pill behind the selected label instead of a thin
+    // underline, no grey divider.
+    tabBarTheme: TabBarThemeData(
+      labelColor: AppColors.primary,
+      unselectedLabelColor: AppColors.textSecondary,
+      labelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      unselectedLabelStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+      indicator: BoxDecoration(color: AppColors.attendanceCard, borderRadius: BorderRadius.circular(999)),
+      indicatorSize: TabBarIndicatorSize.tab,
+      labelPadding: const EdgeInsets.symmetric(horizontal: 18),
+      dividerColor: Colors.transparent,
+      splashBorderRadius: BorderRadius.circular(999),
+      overlayColor: WidgetStateProperty.all(Colors.transparent),
+    ),
     dividerTheme: const DividerThemeData(color: AppColors.border, space: 1),
+    // Screens slide in from the right to left on push, and back out to the
+    // right on pop, with smooth parallax and shadow on all platforms.
     pageTransitionsTheme: const PageTransitionsTheme(builders: {
-      TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
-      TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      TargetPlatform.android: SlideRightLeftPageTransitionsBuilder(),
+      TargetPlatform.iOS: SlideRightLeftPageTransitionsBuilder(),
+      TargetPlatform.linux: SlideRightLeftPageTransitionsBuilder(),
+      TargetPlatform.windows: SlideRightLeftPageTransitionsBuilder(),
+      TargetPlatform.macOS: SlideRightLeftPageTransitionsBuilder(),
+      TargetPlatform.fuchsia: SlideRightLeftPageTransitionsBuilder(),
     }),
   );
 }

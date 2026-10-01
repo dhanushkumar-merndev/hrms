@@ -101,3 +101,22 @@ Deno.test("wrong challenge, wrong package and broken signatures are rejected", a
   await assertRejects(() => verifyAndroidAttestation([a.certs[0], b.certs[1]], challenge, dev));
   await assertRejects(() => verifyAndroidAttestation([a.certs[0]], challenge, dev));
 });
+
+// A real phone's chain: its P-384 intermediate signs the batch key with SHA-256,
+// which the Edge runtime's WebCrypto cannot verify (it only pairs P-256/SHA-256
+// and P-384/SHA-384). Registration failed on the device until EC links were
+// verified in pure JS. The challenge is read back from the leaf.
+Deno.test("real TEE chain with a P-384 intermediate signing SHA-256 verifies (enforce mode)", async () => {
+  const fixture = JSON.parse(await Deno.readTextFile(new URL("./fixtures/android_chain_p384_sha256.json", import.meta.url)));
+  const chain: string[] = fixture.chain;
+  const leaf = new x509.X509Certificate(chain[0]);
+  const kd = AsnConvert.parse(leaf.getExtension("1.3.6.1.4.1.11129.2.1.17")!.value, KeyDescription);
+  const challenge = new Uint8Array(kd.attestationChallenge.buffer);
+  const r = await verifyAndroidAttestation(chain, challenge, { ...dev, mode: "enforce" });
+  assertEquals(r.level, "hardware");
+  assertEquals(r.summary.root, "google");
+  // Any broken link is still rejected.
+  const tampered = [...chain];
+  tampered[1] = chain[2];
+  await assertRejects(() => verifyAndroidAttestation(tampered, challenge, { ...dev, mode: "enforce" }));
+});

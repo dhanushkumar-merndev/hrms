@@ -87,10 +87,13 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
 
   Future<void> _pickTime(bool isIn, Map<String, dynamic>? day) async {
     TimeOfDay initial = isIn ? const TimeOfDay(hour: 10, minute: 0) : const TimeOfDay(hour: 19, minute: 0);
-    final src = isIn ? (day?['start_at']) : (day?['end_at']);
-    final parsed = OrgTime.parse(src);
+    // Start from the recorded punch if there is one, else the shift time;
+    // never suggest a check-out later than now (the server refuses that).
+    final src = isIn ? (day?['effective_in_at'] ?? day?['start_at']) : (day?['effective_out_at'] ?? day?['end_at']);
+    var parsed = OrgTime.parse(src);
+    if (!isIn && parsed != null && parsed.isAfter(DateTime.now())) parsed = DateTime.now();
     if (parsed != null) {
-      final l = OrgTime.local(parsed);
+      final l = OrgTime.local(parsed.toUtc());
       initial = TimeOfDay(hour: l.hour, minute: l.minute);
     }
     final t = await showTimePicker(context: context, initialTime: (isIn ? _in : _out) ?? initial);
@@ -176,6 +179,26 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
                         style: TextStyle(color: AppColors.error)),
                 ]),
               ),
+              // A correction sets both times and check-out cannot be in the
+              // future, so an open day can only be fixed after checking out.
+              if (d != null && d['effective_in_at'] != null && d['effective_out_at'] == null &&
+                  OrgTime.ymd(_date) == OrgTime.ymd(OrgTime.today())) ...[
+                const SizedBox(height: AppSpacing.md),
+                SectionCard(
+                  color: AppColors.warningSoft,
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Icon(Icons.info_outline_rounded, color: AppColors.warning),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        'You are still checked in today. Check out first, then fix the check-in time here — '
+                        'a correction needs both the check-in and check-out times.',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.text),
+                      ),
+                    ),
+                  ]),
+                ),
+              ],
               const SizedBox(height: AppSpacing.lg),
               SectionCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [

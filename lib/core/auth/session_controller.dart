@@ -8,6 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../app/config.dart';
 import '../api/api_client.dart';
 import '../api/api_exception.dart';
+import '../cache.dart';
+import '../push/push_service.dart';
 import 'secure_session_storage.dart';
 
 /// Server-owned identity and permissions for the signed-in employee.
@@ -90,6 +92,19 @@ class SessionController extends Notifier<SessionState> {
   ApiClient get _api => ref.read(apiProvider);
   SupabaseClient get _sb => ref.read(supabaseProvider);
   static const _pendingPasswordOp = 'hrms.pending_password_op';
+  String? _identity;
+
+  /// Every identity change (sign-out, a different employee) drops cached
+  /// data before anything else can read it.
+  @override
+  set state(SessionState next) {
+    final identity = next.context?.employeeId;
+    if (identity != _identity) {
+      dropIdentityCaches();
+      _identity = identity;
+    }
+    super.state = next;
+  }
 
   @override
   SessionState build() {
@@ -177,6 +192,9 @@ class SessionController extends Notifier<SessionState> {
   }
 
   Future<void> logout() async {
+    // Unbind this phone's push token while the session is still valid, so
+    // the next person on this phone never receives this employee's pushes.
+    await PushService.unregister(_api);
     await _localSignOut(null, revoke: true);
   }
 
@@ -187,6 +205,7 @@ class SessionController extends Notifier<SessionState> {
       await SecureSessionStorage().removePersistedSession();
     }
     await clearSensitiveTemp();
+    await clearArchiveWork();
     state = SessionState(SessionPhase.signedOut, message: message);
   }
 
@@ -198,9 +217,19 @@ class SessionController extends Notifier<SessionState> {
       if (await dir.exists()) await dir.delete(recursive: true);
     } catch (_) {}
   }
+
+  /// Annual-archive working files (kept across restarts so a large download
+  /// can resume) are removed when the Admin signs out.
+  static Future<void> clearArchiveWork() async {
+    try {
+      final dir = Directory('${(await getApplicationSupportDirectory()).path}/hrms_archive');
+      if (await dir.exists()) await dir.delete(recursive: true);
+    } catch (_) {}
+  }
 }
 
 final sessionProvider = NotifierProvider<SessionController, SessionState>(SessionController.new);
+
 
 /// The signed-in context; throws if used outside a ready session.
 final sessionContextProvider = Provider<SessionContext?>((ref) => ref.watch(sessionProvider).context);

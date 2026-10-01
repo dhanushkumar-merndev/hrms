@@ -1,19 +1,11 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/cache.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/time/org_time.dart';
 
-/// Keeps an auto-dispose provider cached for [ttl] after its last listener.
-void cacheFor(Ref ref, Duration ttl) {
-  final link = ref.keepAlive();
-  Timer? timer;
-  ref.onCancel(() => timer = Timer(ttl, link.close));
-  ref.onResume(() => timer?.cancel());
-  ref.onDispose(() => timer?.cancel());
-}
+export '../../core/cache.dart' show cacheFor;
 
 /// One request for the whole Home screen (architecture §10).
 final homeSummaryProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {

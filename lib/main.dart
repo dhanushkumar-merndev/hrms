@@ -7,6 +7,7 @@ import 'app/config.dart';
 import 'core/api/api_exception.dart';
 import 'core/auth/secure_session_storage.dart';
 import 'core/auth/session_controller.dart';
+import 'core/push/push_service.dart';
 import 'core/time/org_time.dart';
 
 Future<void> main() async {
@@ -25,6 +26,7 @@ Future<void> main() async {
     ),
   );
   await SessionController.clearSensitiveTemp();
+  await PushService.init();
   runApp(ProviderScope(
     // Only transient network failures are retried automatically; server
     // decisions (denied, validation, conflicts) are shown immediately.

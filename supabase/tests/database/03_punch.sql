@@ -206,4 +206,17 @@ select test.eq((select test.err(pg_temp.punch('HR02', 'IN',
                   (select id from hrms.work_schedule_instances where employee_id = test.emp('HR02') and shift_date = date '2026-10-02'),
                   pg_temp.device('HR02'), (pg_temp.at(5)).lat, (pg_temp.at(5)).lng))),
   'INVALID_SHIFT', 'PUNCH-009 holiday disables ordinary IN');
+-- HOME-002: the morning after a completed day, Home offers TODAY's shift (it
+-- returned yesterday's closed one: NULL sorted after false with NULLS LAST).
+select hrms.ensure_schedule_instances(test.org('TEST_ORG'), array[test.emp('HR01')],
+  hrms.org_today(test.org('TEST_ORG')) - 1, hrms.org_today(test.org('TEST_ORG')));
+insert into hrms.attendance_sessions (org_id, employee_id, schedule_instance_id, shift_date, state,
+                                      effective_in_at, effective_out_at)
+select org_id, employee_id, id, shift_date, 'closed', start_at, start_at + interval '1 minute'
+from hrms.work_schedule_instances
+where employee_id = test.emp('HR01') and shift_date = hrms.org_today(test.org('TEST_ORG')) - 1;
+create temporary table home_day as select hrms.org_today(test.org('TEST_ORG'))::text as d;
+grant select on home_day to authenticated;
+select test.login('HR01');
+select test.eq(public.get_home_summary() -> 'data' -> 'shift' ->> 'shift_date', (select d from home_day), 'HOME-002 next morning Home shows today, not yesterday''s closed shift');
 rollback;

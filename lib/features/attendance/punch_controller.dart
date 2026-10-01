@@ -230,6 +230,11 @@ class PunchController extends Notifier<PunchState> {
       final serverNow = DateTime.parse(challenge['server_time'] as String).toUtc();
       final skewMs = serverNow.millisecondsSinceEpoch - DateTime.now().toUtc().millisecondsSinceEpoch;
 
+      // Fingerprint first, then a fresh reading: time at the prompt never
+      // makes the location stale (server allows only a few seconds).
+      await _deviceKey.authorize(_alias,
+          title: action == 'IN' ? 'Confirm check-in' : 'Confirm check-out',
+          subtitle: 'Use your fingerprint or face to verify it is you');
       final sample = await _location.freshSample();
       final sampleMs = sample.timestamp.toUtc().millisecondsSinceEpoch + skewMs;
       final payload = PunchPayload(
@@ -246,9 +251,7 @@ class PunchController extends Notifier<PunchState> {
         accuracy: PunchPayload.acc(sample.accuracy.clamp(0, 9999.99).toDouble()),
         sampleAtMs: sampleMs.toString(),
       );
-      final signature = await _deviceKey.sign(_alias, Uint8List.fromList(payload.bytes),
-          title: action == 'IN' ? 'Confirm check-in' : 'Confirm check-out',
-          subtitle: 'Use your fingerprint or face to verify it is you');
+      final signature = await _deviceKey.signAuthorized(Uint8List.fromList(payload.bytes));
 
       final res = await _api.function('punch', payload.toRequest(signature, isMocked: sample.isMocked));
       await _finish(res.map);
@@ -271,6 +274,7 @@ class PunchController extends Notifier<PunchState> {
       }
     } catch (_) {
       await _clearPending();
+      await _deviceKey.clearAuthorized();
       state = s.copy(
           phase: PunchPhase.failure,
           message: 'Could not get a fresh precise location. Move to a spot with better signal and retry.',
@@ -333,7 +337,7 @@ class PunchController extends Notifier<PunchState> {
       'not_open_yet' => 'Check-in opens a little before your shift starts.',
       'window_closed' => 'The check-in window for this shift has closed. Request a correction if you worked.',
       'completed' => 'You have already completed today\'s shift.',
-      'needs_correction' => 'This shift needs a correction. Use Regularize.',
+      'needs_correction' => 'This shift needs a correction. Use "Fix a punch".',
       _ => 'Punching is not available right now.',
     };
   }

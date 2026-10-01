@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/api/api_client.dart';
 import '../core/auth/session_controller.dart';
+import '../core/push/push_service.dart';
 import '../features/home/home_providers.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -27,6 +29,17 @@ class _HrmsAppState extends ConsumerState<HrmsApp> {
         ref.read(sessionProvider.notifier).refreshContext();
         ref.invalidate(homeSummaryProvider);
       }
+    });
+    // Push (optional): re-bind after sign-in, refresh counts on arrival, and
+    // open the in-app route when a notification is tapped.
+    ref.listenManual(sessionProvider, (prev, next) {
+      if (next.phase == SessionPhase.ready && prev?.phase != SessionPhase.ready) {
+        PushService.restore(ref.read(apiProvider));
+      }
+    });
+    PushService.onForeground(() => ref.invalidate(homeSummaryProvider));
+    PushService.onOpen((route) {
+      if (ref.read(sessionProvider).phase == SessionPhase.ready) ref.read(routerProvider).push(route);
     });
   }
 

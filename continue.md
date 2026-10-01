@@ -9,43 +9,110 @@ Version 1.1 · 29 September 2026.
 - [x] Eight original UI references included and mapped in design.md.
 - [x] Functional, boundary, authorization, concurrency, export and recovery test plan written.
 - [x] v1.1 specification review completed; findings below corrected across the five documents.
-- [ ] Application repository inspected or scaffolded.
-- [ ] Flutter source code implemented.
-- [ ] Supabase/FCM/platform accounts connected or configured.
-- [ ] Automated tests implemented/executed.
-- [ ] Native Android/iOS builds or deployments produced.
+- [x] Application repository inspected and initialised (see "Local setup" below).
+- [x] Flutter source code implemented for S01–S38 (S38 simple announcements enabled).
+- [ ] Supabase/FCM/platform accounts connected or configured for the NEW migrations/functions (owner action — see below).
+- [x] Automated tests implemented and executed locally (DB, Deno, Flutter unit/widget). Native integration tests: not yet.
+- [~] Native Android builds produced locally with placeholder config (debug + release). No signed release yet; iOS not built (needs macOS).
 - [ ] Physical-device GPS/security/notification validation completed.
 
-**Status (2026-09-30, in progress): backend deployed to staging Supabase; Flutter app partially built.** See "Implementation status" below.
+**Status (2026-09-30): feature-complete in code and green in every local suite; NOT production-released.** The
+release gates in M9 (physical office pilot, signed builds, backups/restore drill, provider setup) still need the owner's
+accounts and devices. See "Implementation status" and "Owner action items".
 
-## Implementation status (2026-09-29)
+## Implementation status (2026-09-30, second session)
 
-Owner decisions this session (controlling): internal distribution only (no Play/App Store) → Play Integrity and App Attest replaced by **Android Key Attestation** (hardware key verified against Google roots) + **biometric-bound punch key** (org setting `require_biometric_punch`, default on; server verifies via attestation). iOS punching deferred (needs Mac/Apple account). Holiday API import (Calendarific) dropped. Owner asked (2026-09-30) for automatic holiday *suggestions*: planned monthly pg_cron → Edge job reading Google's public "Holidays in India" ICS feed (no key), stored as suggestions the Admin publishes; never auto-published.
+Owner decisions carried forward: internal distribution only (no Play/App Store) → Android Key Attestation +
+biometric-bound punch key instead of Play Integrity/App Attest; iOS punching deferred (needs Mac/Apple account);
+Calendarific dropped; holiday **suggestions** from Google's public "Holidays in India" ICS feed (no key), never
+auto-published.
 
-Environment: Flutter 3.47.5 / Dart 3.13.4, Android SDK 36, JBR 25 (Android Studio). No Docker → DB tests run on user-space Postgres 17 + PostGIS 3.6 (`tool/local_db.sh`, micromamba in `.tools/`). Deno 2.9.7 in `.tools/bin`. Supabase CLI 2.118.0 via npx. Test phones: OPPO CPH2757 (Android 16, `616bef82`), Realme RMX2161.
+Environment (this machine): Flutter 3.47.5 / Dart 3.13.4, Android SDK 36 (`flutter doctor`: no issues), Postgres 17 +
+PostGIS in `.tools/pgenv` (micromamba, `tool/local_db.sh install`), Deno 2.9.7 in `.tools/bin`. No Docker, no `.env`
+(no provider credentials on this machine), no connected test phone was used.
 
-Done and verified:
-- `.env.example` (trimmed per owner), `tool/gen_app_config.dart` (only public keys reach the app; refuses secret keys).
-- 14 migrations in `supabase/migrations/` (identity/gates, scheduling + hours engine, attendance/punch, leave ledger + request/approval state machine, files/payslips, admin config, people/reports/notifications/audit, maintenance + pg_cron, bootstrap). Tables in unexposed `hrms` schema, deny-all RLS, all access via `public.*` definer RPCs with `hrms.current_actor()` gate; `internal_*` service-role only.
-- DB tests: `tool/db_test.sh` → 5 suites, 253 assertions PASS (grants, TIME-001..018, LOC/PUNCH, LEAVE/REVIEW/CORR, AUTH/ROLE/EMP).
-- Edge Functions (8) deployed: auth-login, auth-password, auth-reauth, admin-users, device-register, punch, files, maintenance. Deno unit tests: 13 PASS (`.tools/bin/deno test -A supabase/functions/tests/`).
-- Deployed to staging project via `tool/deploy.sh`; first Admin created with `dart run tool/bootstrap_admin.dart` (ADMIN001, temporary password shown once). Live E2E: login → restricted session → PASSWORD_CHANGE_REQUIRED verified.
-- Flutter: core (API client, secure session storage, session state machine, theme tokens, widgets, router/shell), screens: login, password change, home, action, explore, punch (+ Kotlin `DeviceKeyChannel` for attested biometric key), attendance list/day/correction, my requests + detail, file viewer, leave balances/history, holidays. `flutter analyze` clean at last check; Dart payload hash matches server (test/unit).
-- Routes registered (attendance, attendance/day, corrections/new, requests, requests/:id, leave, leave/apply, holidays) and leave apply screen (S12) written; `flutter analyze` clean.
-- Release APK (61.3 MB) installed on OPPO CPH2757 (`adb install -r` → Success, 2026-09-30). On-device launch/screenshot not yet captured by the agent.
+### Local setup (reproducible)
 
-Owner action items:
-- Supabase dashboard: Authentication → turn OFF "Allow new users to sign up"; Email → minimum password length 12 (token lacks `project_admin_write`).
-- Reset the database password (it was printed once by an npm notice; deploy script now redacts) and update `SUPABASE_DB_URL`.
-- Optional: Firebase keys for push; release keystore for signed APKs.
+```sh
+flutter pub get
+tool/local_db.sh install && tool/local_db.sh start      # user-space Postgres 17 + PostGIS on :54329
+curl -fsSL -o .tools/deno.zip https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip \
+  && python3 -c "import zipfile;zipfile.ZipFile('.tools/deno.zip').extractall('.tools/bin')" && chmod +x .tools/bin/deno
+tool/db_test.sh                                          # migrations + SQL suites (disposable local DB only)
+.tools/bin/deno test -A supabase/functions/tests/       # Edge Function unit tests
+flutter analyze && flutter test                          # app static checks + unit/widget tests
+cp .env.example .env   # fill in, then: dart run tool/gen_app_config.dart && tool/deploy.sh
+flutter build apk --release --dart-define-from-file=build/app_config.json
+```
 
-Next exact steps:
-1. On phone: sign in ADMIN001, change password; confirm startup/home render (screenshot evidence).
-2. Build admin setup screens needed for punching: offices S31 (use current location), shifts S30 (publish draft), employee office/shift assignment. Then test real check-in/out on phone.
-3. Holiday suggestions: Edge function + pg_cron monthly fetch of Google public India holiday ICS → `holiday_suggestions`; Admin reviews and publishes in holidays admin.
-4. Remaining screens: approvals queue/detail (S22/S23), payslips + payroll uploads (S14/S15/S28), documents (S18), profile/people (S16/S17), notifications/settings (S19/S20), workspace/reports (S21/S24), employees list/detail/new (S25–S27), admin teams/leave-policies/permissions/org/audit (S29, S32, S33, S36, S37), announcements (S38).
-5. M7/M8 annual export + cleanup (SQL + Edge + client ZIP) — not started.
-6. Push (FCM) client registration; widget/integration tests.
+### Verified results (this session, actual commands)
+
+| Suite | Command | Result |
+| --- | --- | --- |
+| DB (real API roles + JWT claims) | `tool/db_test.sh` | 15 migrations; **7 suites, 368 assertions PASS** (01 grants 18, 02 hours 57, 03 punch 42, 04 leave/review 81, 05 identity 55, **06 archive 102**, **07 holiday suggestions 13**) |
+| Edge Functions | `.tools/bin/deno test -A supabase/functions/tests/` + `deno check` | **18 PASS** (5 new: ICS parsing, exact-key batch deletion); all 10 functions type-check |
+| Flutter static | `flutter analyze` | No issues |
+| Flutter unit/widget | `flutter test` | **27 PASS** (manifest hash equals the PostgreSQL implementation, ZIP path safety, bounded archive extraction, XLSX formula-injection safety, S14/S19/S22/S27 widgets, CACHE-001) |
+| Android build | `flutter build apk --debug` / `--release` with placeholder config | debug built (242 s); **release built, 65.6 MB** (R8). Placeholder-config APKs deleted afterwards — not for install |
+
+### Built in this session
+
+Backend
+- `20260930100000_archive.sql` (M7/M8): materialised annual periods with explicit transition periods (EXP-019);
+  `create_archive_export` freezes rows + immutable file inventory + canonical manifest hash in one locked transaction;
+  staleness triggers (EXP-005/006); audited <=60 s export links; acknowledgment with hash/count checks and partial mode
+  (EXP-010/011/017); cleanup gates, typed-label confirmation, reauth, exact inventory, persistent period write gate
+  (PERIOD_BUSY), leased idempotent batches, driver takeover, abandon, tombstones (DEL-001..012); assisted restore with
+  hash check (DEL-010); Admin tasks (annual archive due); HR employee file list. Also fixes two earlier gaps:
+  `list_my_payslips` returned timestamps, and `internal_authorize_file_access` denied (instead of "archived — contact
+  HR") for cleaned files (FILE-010). `publish_payslip` no longer tries to supersede a deleted version.
+- `20260930100100_holiday_suggestions.sql` + Edge `holiday-suggestions` + maintenance kind `holidays` (daily check,
+  fetches when >25 days old): suggestions only, de-duplicated, drafts only on explicit Admin/HR action (HOL-002).
+- Edge `archive` function: `file_url` (export downloads) and `cleanup_batch` (claim → delete exact keys → record).
+
+App (all screens use server authorisation; UI gates are UX only; sensitive screens re-read permissions every 30 s and
+hide detail offline)
+- S14 payslips, S16 profile (+ private details, photo), S17 directory, S18 documents (+ policy upload), S19 inbox,
+  S20 settings (password, push toggle, punching phone, sign out), S21 workspace, S22/S23 approvals (atomic lock-on-open,
+  Admin fallback reason, approve/return/reject, withdrawal/cancellation decisions, reassignment), S24 hours report
+  (day/week/month/custom, team/office filters, expandable rows, Admin XLSX export), S25–S27 employees (list, full HR
+  record with effective-dated team/office/shift, private details, reset with one-time password, deactivate/reactivate,
+  devices, documents, leave adjustment, schedule exceptions; provisioning with one-time temporary password),
+  S28 payroll uploads, S29 teams/departments/managers, S30 shifts (draft/publish, worked-hours preview), S31 offices
+  (current-location capture, calibration guidance), S32 leave types/entitlements/approval routes/holidays +
+  suggestions, S33 roles & permissions (reauth for elevation), S34/S35 annual archive (on-phone build: resumable
+  2-way downloads with SHA-256, bounded extraction of earlier originals, streamed ZIP in an isolate, full read-back
+  verification, save/share, acknowledgment, guarded cleanup with resume/abandon), assisted restore, S36 audit,
+  S37 organisation (cycle-change preview, maintenance health), S38 announcements.
+- Optional FCM push (Android): register/unregister per installation, unbound at sign-out, taps open in-app routes.
+- CACHE-001 fix: in Riverpod 3 a provider with no listeners is paused, so the earlier listener-based cache drop would
+  not fire after sign-out. Identity-scoped caches are now released directly by the session controller (test added).
+
+### Owner action items (cannot be done from this machine)
+
+1. DONE 2026-09-30: staging has all 15 migrations and all 10 Edge Functions (`tool/deploy.sh`; dry run reports
+   "Remote database is up to date").
+2. Supabase dashboard — STILL OPEN (checked 2026-09-30: sign-up enabled, minimum password length 6; the
+   `.env` access token lacks `project_admin_write`, so `tool/deploy.sh` cannot set these): Authentication → turn OFF
+   "Allow new users to sign up"; Email → minimum password length 12. Rotate the database password that was printed
+   once in the first session and update `SUPABASE_DB_URL`.
+3. Release signing: create the keystore (`.env` ANDROID_KEYSTORE_*), set `HRMS_ANDROID_CERT_SHA256` for production
+   attestation, build `--release` with `HRMS_ENVIRONMENT=production` config.
+4. Push: `APP_FIREBASE_*` and `HRMS_FCM_SERVICE_ACCOUNT_B64` are set and deployed (build says push=on); delivery to
+   a phone not yet verified.
+5. Physical checks (release gates): office pilot per office (S31 calibration), punch on 2+ Android phones, archive
+   build of a realistic year on a mid-range phone (measure time/space; >1 GB not yet spiked on device), backup +
+   restore drill, iOS build/signing on a Mac if iOS is needed.
+
+### Next exact steps
+
+1. Owner: sign in as ADMIN001 (temporary password was re-issued by an operator reset on 2026-09-30; the app forces
+   a new password), complete Organisation → Offices → Shifts (publish) →
+   Leave types/entitlements → Holidays → Teams/approval routes → Employees.
+2. On a phone at the office: register the punching phone, check in/out, verify the distance/accuracy evidence.
+3. Staging E2E of archive: close a test period (staging data), create export, build/save on phone, acknowledge,
+   cleanup a test file, abandon/resume, restore. Record timings in the evidence log.
+4. Add native `integration_test` journeys (login → password change → punch reconcile) once a device is attached.
 
 ## Read order and first action
 
@@ -83,11 +150,11 @@ Implement configuration forms and defaults while these are collected. They must 
 
 ### M0 — bootstrap and tools
 
-- [ ] Inspect repo/instructions/git status, preserve existing work.
-- [ ] Record Flutter/Dart/Android/macOS-Xcode/Supabase/Deno tooling availability.
-- [ ] Pin current compatible dependencies, initialize feature structure/theme/router.
+- [x] Inspect repo/instructions/git status, preserve existing work.
+- [x] Record Flutter/Dart/Android/macOS-Xcode/Supabase/Deno tooling availability (no macOS/Xcode here).
+- [x] Pin current compatible dependencies, initialize feature structure/theme/router.
 - [ ] Create separate local/staging/prod configs; `.env.example` without secret values.
-- [ ] Set up disposable local Supabase and deterministic fake fixtures.
+- [x] Set up disposable local Supabase and deterministic fake fixtures (user-space Postgres + shim; no Docker).
 - [ ] Define CI format/analyze/unit/widget/API/DB tasks with actual commands.
 
 Exit: reproducible local app and migrations; tooling blockers recorded accurately. Tests: baseline build plus SEC-001 configuration inspection.
@@ -97,7 +164,7 @@ Exit: reproducible local app and migrations; tooling blockers recorded accuratel
 - [ ] Core employee/org/roles/team/office tables, constraints, RLS and scoped projections.
 - [ ] Employee ID alias login and server-side provisioning/reset saga.
 - [ ] Temporary credential gate, fail-closed credential-operation hold/reconciliation, original-session revocation checks, native Auth bypass tests, rate limits, last-Admin protection.
-- [ ] S01–02/16–17/20/25–27/29/33/37 real forms and permissions.
+- [x] S01–02/16–17/20/25–27/29/33/37 real forms and permissions.
 - [ ] Auth audit and current-permission guard used by all future functions.
 
 Exit: cannot read/change other employee's protected data by direct API; no public signup or secret leak. Tests: AUTH, ROLE, EMP, API-001, SEC-002/003.
@@ -108,7 +175,7 @@ Exit: cannot read/change other employee's protected data by direct API; no publi
 - [ ] Paid lunch, grace, early entry/credit, checkout extension, overnight handling.
 - [ ] Holiday draft/import/manual selection/publish; initial target 12, allowance independent.
 - [ ] Exact-second duration model, half-day required intervals and label anchors, absence rules, leave/work conflict guards, partial/unknown report totals.
-- [ ] S13/30–32 calendar/configuration with numeric limits and previews.
+- [x] S13/30–32 calendar/configuration with numeric limits and previews.
 
 Exit: deterministic unit/API fixtures match all examples; historical policies aren't rewritten. Tests: TIME, HOL, EMP-002.
 
@@ -132,7 +199,7 @@ Exit: concurrent/duplicate punches safe; UI success means committed server resul
 - [ ] Returned reservation release, failed-edit rollback, resubmission, old-year cancellation credit, explicit withdrawal/cancellation/reversal states.
 - [ ] Returned/rejected/withdrawn/cancellation states and exact-once ledger adjustments.
 - [ ] Attendance correction approval preserves original records and recalculates effective totals.
-- [ ] S10–12/21–23; notification outbox event insertion.
+- [x] S10–12/21–23; notification outbox event insertion.
 
 Exit: all race recipes pass against real database. Tests: LEAVE, REVIEW, CORR, AUDIT-001.
 
@@ -144,7 +211,7 @@ Exit: all race recipes pass against real database. Tests: LEAVE, REVIEW, CORR, A
 - [ ] Explicit HR payroll grant; protected ownership and latest 12-month API access.
 - [ ] Secure PDF preview/download and masked/minimal Home card; no fake payroll amounts.
 - [ ] Storage budget ledger/reconciliation and abandoned-upload cleanup.
-- [ ] S14–15/18/28; user/account-switch cleanup of sensitive temp data.
+- [x] S14–15/18/28; user/account-switch cleanup of sensitive temp data.
 
 Exit: direct Storage/API ID guessing cannot bypass permissions. Tests: FILE, CACHE-001, SEC-001.
 
@@ -155,28 +222,28 @@ Exit: direct Storage/API ID guessing cannot bypass permissions. Tests: FILE, CAC
 - [ ] Riverpod scoped caches/invalidation, lazy lists, loading/empty/offline states.
 - [ ] Supabase Cron/Vault/pg_net bounded maintenance runner, leases, health reporting and lazy correctness fallback.
 - [ ] Exactly-once inbox state, best-effort/retryable push, token refresh/logout cleanup; APNs integration.
-- [ ] S19/24/36 and safe audit views; S38 only simple announcements if enabled.
+- [x] S19/24/36 and safe audit views; S38 only simple announcements if enabled.
 
 Exit: metrics/role scope correct, performance measured, push failure doesn't affect transactions. Tests: NOTIF, AUDIT, CACHE, PAGE, PERF.
 
 ### M7 — annual archive and local file export
 
-- [ ] Immutable business-period snapshot rows/items, revision watermark, closed-year gates.
-- [ ] Admin report XLSX and annual nested ZIP; all eligible employee/file revisions covered.
+- [x] Immutable business-period snapshot rows/items, revision watermark, closed-year gates.
+- [x] Admin report XLSX and annual nested ZIP; all eligible employee/file revisions covered.
 - [ ] Prototype large streamed archive on Android/iOS, isolate ZIP/XLSX work, bounded memory/disk.
 - [ ] Resumable authorized download, checksums/count verification, local Files/document save.
-- [ ] XLSX formula protection and safe filename/folder construction.
-- [ ] S34–35 export progress, annual due task, overnight provisional status, verified-save acknowledgment.
+- [x] XLSX formula protection and safe filename/folder construction.
+- [x] S34–35 export progress, annual due task, overnight provisional status, verified-save acknowledgment.
 - [ ] Rebuild full annual archive from validated local originals after cloud cleanup; partial fallback cannot unlock cleanup; explicit period-transition coverage.
 
 Exit: cutoff and as-of behavior clear; incomplete archives never cleanup-eligible. Tests: EXP plus ARCHIVE recipes in test.md.
 
 ### M8 — guarded annual file cleanup and restore
 
-- [ ] Reauthentication, current-manifest validation, exact-file preview and period confirmation.
-- [ ] Live-window archive warning, file exclusions, no deletion of HR/attendance/leave/audit.
-- [ ] Transactional period lock, immutable delete inventory, per-object resumable Storage cleanup.
-- [ ] Tombstones, partial-failure result, saved manifest; cross-Admin resume, worker lease and abandon-partial behavior; no false Undo/recovery promise.
+- [x] Reauthentication, current-manifest validation, exact-file preview and period confirmation.
+- [x] Live-window archive warning, file exclusions, no deletion of HR/attendance/leave/audit.
+- [x] Transactional period lock, immutable delete inventory, per-object resumable Storage cleanup.
+- [x] Tombstones, partial-failure result, saved manifest; cross-Admin resume, worker lease and abandon-partial behavior; no false Undo/recovery promise.
 - [ ] Document and test assisted restore from verified local archive.
 
 Exit: exact-set deletion proof and interrupted cleanup recovery pass in staging. Tests: DEL, EXP-005/006, FILE-010, OPS-001.
@@ -231,6 +298,9 @@ Fill with actual evidence after implementation, never inferred success.
 | 2026-09-29 / specification | Not an app build | Document/archive validation only | Specifications and original UI references packaged | All software/provider tasks pending | Inspect target repo and execute M0 |
 | 2026-09-29 / v1.1 review | Not an app build | Cross-document review and ZIP checks | R01–R11 corrected; 191 QA scenarios specified (31 new); app tests not executed | Native/API implementation and validation still pending | Read review register, then execute M0 |
 | 2026-09-30 / M1–M5 partial | Release APK (uncommitted working tree) | `tool/db_test.sh`; `deno test`; `tool/deploy.sh`; `flutter analyze`; `adb -s 616bef82 install -r` | 253 DB assertions PASS; 13 Deno PASS; live login E2E PASS; APK installed on OPPO | Punch untestable until office/shift admin screens exist; many screens pending | Build S30/S31 + assignment, then punch on phone |
+| 2026-09-30 / M1–M8 code complete | Working tree (uncommitted) | `tool/db_test.sh`; `deno test`/`deno check`; `flutter analyze`; `flutter test`; `flutter build apk --debug/--release` (placeholder config) | 368 DB assertions PASS (7 suites incl. EXP/DEL/HOL-002); 18 Deno PASS; 27 Flutter PASS; analyze clean; debug+release APK built | New migrations/functions not yet deployed; no device, signing, Firebase, office pilot or restore drill | Owner deploys with `tool/deploy.sh`, then staging E2E per "Next exact steps" |
+| 2026-09-30 / staging deploy + device install | Working tree (uncommitted), staging project | `tool/deploy.sh`; `supabase db push --dry-run`; `flutter build apk --release --target-platform android-arm64`; `adb -s S4V8SKXS7PGIHQGI install -r` | 2 migrations applied (remote up to date); 10 functions deployed; secrets + Vault set; arm64 release APK (23.4 MB, debug-signed, push=on) installed and launched on Realme RMX2161 / Android 12, sign-in screen renders, no errors in logcat | Auth hardening refused (token lacks `project_admin_write`); no signed-in journey, punch or push delivery verified yet | Owner sets Auth settings in dashboard, signs in, runs setup and on-site punch |
+| 2026-09-30/10-01 / staging setup + live E2E | Working tree (uncommitted), staging | API scripts as real users; phone over adb; `deno test`; `flutter analyze/test` | Org set up (Video Grapher/Social Media/IT teams, managers Sanjay/Pruthivi in Management, Main Office from phone GPS, General 10–19 Mon–Sat published, CL 12/PL 12/UL). 6 accounts provisioned; first sign-in/forced change 18/18; roles, access denials, leave approve/reject/withdraw/cancel, Admin fallback and override-with-reason all verified; test leave cancelled, balances restored. FIXED: device registration failed on real TEE chains (P-384 intermediate signing SHA-256 unsupported by Edge Runtime WebCrypto) — EC links now verified with @noble/curves, regression fixture added (19 Deno PASS), device-register redeployed; phone registered + IN/OUT punched (hardware, signature verified, 2.7 m). FIXED: Home kept yesterday's status when left open overnight (card date from phone clock, refresh not retried) — date now from server shift_date, Home reloads on day change / 5 min / error. Office + leave-policy form spacing fixed. FIXED (migration 20261001100000, deployed): the morning after a completed day, `hrms.current_shift` returned yesterday's closed shift (NULLS LAST ordered "no session" after "closed"), so Check in was unavailable; HOME-002 reproduces it (got 2026-09-30) and passes with the fix — 7 suites / 369 assertions PASS; phone shows today's Check in | Test-account passwords set during testing were lost with the temp folder and must be re-issued; Auth dashboard hardening still open | Re-issue temporary passwords; Dhanush check-in on 1 Oct with fixed build |
 
 For a blocked item record: required credential/tool/device, code already completed, exact validation still needed, how to resume safely, and owner action. Do not include credential values. For a bug record minimal reproduction and affected test IDs, not just 'not working'.
 

@@ -132,6 +132,14 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
     _schedulePreview();
   }
 
+  void _setDay(DateTime d) {
+    setState(() {
+      _start = d;
+      _end = d;
+    });
+    _schedulePreview();
+  }
+
   Future<void> _attach(Map<String, dynamic>? type) async {
     final picked = await FilePicker.pickFiles(
       type: FileType.custom,
@@ -244,30 +252,43 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
       body: ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
         SectionCard(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            DropdownButtonFormField<String>(
-              initialValue: _typeId,
-              decoration: InputDecoration(labelText: 'Leave type', errorText: _errors['leave_type_id']),
-              items: [
-                for (final t in typeList)
-                  DropdownMenuItem(value: t['id'] as String, child: Text('${t['name']}${t['paid'] == true ? '' : ' (unpaid)'}')),
-              ],
-              onChanged: (v) {
-                setState(() => _typeId = v);
-                _schedulePreview();
-              },
-            ),
+            Text('Leave type', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.sm),
+            for (final t in typeList) ...[
+              _TypeOption(
+                type: t,
+                balance: ((balances?['balances'] as List?) ?? const [])
+                    .cast<Map>()
+                    .where((b) => (b['leave_type'] as Map)['id'] == t['id'])
+                    .firstOrNull,
+                selected: t['id'] == _typeId,
+                onTap: () {
+                  setState(() => _typeId = t['id'] as String);
+                  _schedulePreview();
+                },
+              ),
+              const SizedBox(height: AppSpacing.sm),
+            ],
+            if (_errors['leave_type_id'] != null)
+              Text(_errors['leave_type_id']!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
             if (types.hasError) const Text('Could not load leave types.', style: TextStyle(color: AppColors.error)),
             if (types.value?.isEmpty ?? false)
               const Padding(
                 padding: EdgeInsets.only(top: 8),
                 child: Text('No leave types are published yet. Contact HR.', style: TextStyle(color: AppColors.warning)),
               ),
-            if (balance != null && type?['paid'] == true)
-              Padding(
-                padding: const EdgeInsets.only(top: AppSpacing.sm),
-                child: Text('Available: ${daysFromUnits(available)} days', style: Theme.of(context).textTheme.bodyMedium),
-              ),
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
+            Text('When', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(spacing: AppSpacing.sm, children: [
+              for (final (label, offset) in const [('Today', 0), ('Tomorrow', 1)])
+                ChoiceChip(
+                  label: Text(label),
+                  selected: _single && _start == OrgTime.today().add(Duration(days: offset)),
+                  onSelected: (_) => _setDay(OrgTime.today().add(Duration(days: offset))),
+                ),
+            ]),
+            const SizedBox(height: AppSpacing.md),
             Row(children: [
               Expanded(child: _DateField(label: 'From', date: _start, error: _errors['start_date'], onTap: () => _pickDate(true))),
               const SizedBox(width: AppSpacing.md),
@@ -355,6 +376,50 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
               : const Text('Review & submit'),
         ),
       ]),
+    );
+  }
+}
+
+class _TypeOption extends StatelessWidget {
+  const _TypeOption({required this.type, required this.balance, required this.selected, required this.onTap});
+  final Map<String, dynamic> type;
+  final Map? balance;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final paid = type['paid'] == true;
+    final left = balance?['available_units'] as num?;
+    final none = paid && left != null && left <= 0;
+    final detail = !paid ? 'Unpaid' : left == null ? 'Paid' : '${daysFromUnits(left)} ${left == 2 ? 'day' : 'days'} left';
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.leaveCard : AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: selected ? AppColors.leaveAction : AppColors.border, width: selected ? 1.6 : 1),
+          ),
+          child: Row(children: [
+            Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+                color: selected ? AppColors.leaveAction : AppColors.textSecondary),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(child: Text(type['name'] as String? ?? '', style: Theme.of(context).textTheme.titleSmall)),
+            Text(detail,
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: none ? AppColors.error : paid ? AppColors.leaveAction : AppColors.textSecondary)),
+          ]),
+        ),
+      ),
     );
   }
 }

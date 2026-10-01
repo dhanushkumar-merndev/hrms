@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -103,6 +104,39 @@ class ApiClient {
     return ApiResult(decoded, null, null);
   }
 
+  /// Streams a short-lived signed URL to [target] while hashing it, without
+  /// holding the file in memory. Returns (sha256 hex, byte count). Aborts
+  /// past [maxBytes].
+  Future<(String, int)> downloadToFile(String url, File target, {int maxBytes = 5000000}) async {
+    final sink = _DigestSink();
+    final hasher = sha256.startChunkedConversion(sink);
+    final out = target.openWrite();
+    var size = 0;
+    try {
+      final res = await _http.send(http.Request('GET', Uri.parse(url))).timeout(const Duration(seconds: 60));
+      if (res.statusCode >= 300) {
+        await res.stream.drain<void>();
+        throw const ApiException('ACCESS_DENIED', 'The download link expired. Try again.', retryable: true);
+      }
+      await for (final chunk in res.stream.timeout(const Duration(seconds: 60))) {
+        size += chunk.length;
+        if (size > maxBytes) throw const ApiException('FILE_TOO_LARGE', 'A file was larger than recorded.');
+        hasher.add(chunk);
+        out.add(chunk);
+      }
+      hasher.close();
+      return (sink.value.toString(), size);
+    } on SocketException {
+      throw ApiException.network;
+    } on TimeoutException {
+      throw ApiException.network;
+    } on http.ClientException {
+      throw ApiException.network;
+    } finally {
+      await out.close();
+    }
+  }
+
   /// Downloads bytes from a short-lived signed URL (never cached to disk).
   Future<List<int>> download(String url) async {
     try {
@@ -117,6 +151,16 @@ class ApiClient {
       throw ApiException.network;
     }
   }
+}
+
+class _DigestSink implements Sink<Digest> {
+  late Digest value;
+
+  @override
+  void add(Digest data) => value = data;
+
+  @override
+  void close() {}
 }
 
 final supabaseProvider = Provider<SupabaseClient>((ref) => Supabase.instance.client);

@@ -1,0 +1,292 @@
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../app/theme.dart';
+import '../../core/api/api_client.dart';
+import '../../core/api/api_exception.dart';
+import '../../core/format.dart';
+import '../../core/time/org_time.dart';
+import '../../core/widgets/cards.dart';
+import '../../core/widgets/dialogs.dart';
+import '../../core/widgets/pickers.dart';
+import '../../core/widgets/states.dart';
+import '../files/file_service.dart';
+import '../home/home_providers.dart';
+
+final myProfileProvider = FutureProvider.autoDispose<ApiResult>((ref) async {
+  return ref.read(apiProvider).rpc('get_my_profile');
+});
+
+/// Avatar bytes, kept in memory for the session (dropped on sign-out), so
+/// Home, Profile and lists don't re-download the same photo.
+final avatarBytesProvider = FutureProvider.autoDispose.family<DownloadedFile, String>((ref, id) async {
+  cacheFor(ref, const Duration(minutes: 30));
+  return ref.read(fileServiceProvider).fetch(id);
+});
+
+/// Loads a published avatar through the audited file flow (memory only).
+class AvatarImage extends ConsumerStatefulWidget {
+  const AvatarImage({super.key, required this.fileVersionId, required this.name, this.radius = 36});
+  final String? fileVersionId;
+  final String name;
+  final double radius;
+
+  @override
+  ConsumerState<AvatarImage> createState() => _AvatarImageState();
+}
+
+class _AvatarImageState extends ConsumerState<AvatarImage> {
+  @override
+  Widget build(BuildContext context) {
+    final id = widget.fileVersionId;
+    // A photo is optional: initials show while loading or if it fails.
+    final f = id == null ? null : ref.watch(avatarBytesProvider(id)).value;
+    return CircleAvatar(
+      radius: widget.radius,
+      backgroundColor: AppColors.peopleCard,
+      foregroundImage: f == null ? null : MemoryImage(f.bytes),
+      child: Text(initialsOf(widget.name),
+          style: TextStyle(color: AppColors.peopleAction, fontWeight: FontWeight.w700, fontSize: widget.radius * 0.6)),
+    );
+  }
+}
+
+/// S16 — own profile. Work details are read-only (changed by HR); personal
+/// details are editable here. Every change is audited server-side.
+class ProfileScreen extends ConsumerStatefulWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _uploading = false;
+
+  Future<void> _changePhoto() async {
+    final picked = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp']);
+    if (picked.isEmpty) return;
+    setState(() => _uploading = true);
+    try {
+      final f = picked.single;
+      final id = await ref.read(fileServiceProvider).upload(fileClass: 'avatar', bytes: await f.readAsBytes(), filename: f.name);
+      await ref.read(apiProvider).rpc('publish_document', {'p_file_version_id': id});
+      ref.invalidate(myProfileProvider);
+      ref.invalidate(homeSummaryProvider);
+      if (mounted) showMessage(context, 'Photo updated.');
+    } on ApiException catch (e) {
+      if (mounted) showMessage(context, e.message, error: true);
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = ref.watch(myProfileProvider);
+    return Scaffold(
+      appBar: AppBar(title: const Text('My profile'), actions: [
+        IconButton(
+          tooltip: 'Settings',
+          onPressed: () => context.push('/settings'),
+          icon: const Icon(Icons.settings_outlined),
+        ),
+      ]),
+      body: AsyncView(
+        value: data,
+        onRetry: () => ref.invalidate(myProfileProvider),
+        builder: (res) {
+          final p = res.map;
+          final roles = ((p['roles'] as List?) ?? const []).cast<String>();
+          final private = ((p['private'] as Map?) ?? const {}).cast<String, dynamic>();
+          final shift = (p['shift'] as Map?)?.cast<String, dynamic>();
+          String? nameOf(Object? m) => (m as Map?)?['name'] as String?;
+          return RefreshIndicator(
+            onRefresh: () => ref.refresh(myProfileProvider.future),
+            child: ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
+              SectionCard(
+                child: Row(children: [
+                  AvatarImage(fileVersionId: p['avatar_file_version_id'] as String?, name: p['name'] as String? ?? ''),
+                  const SizedBox(width: AppSpacing.lg),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(p['name'] as String? ?? '', style: Theme.of(context).textTheme.titleLarge),
+                      Text('${p['code']}${p['designation'] != null ? ' · ${p['designation']}' : ''}',
+                          style: Theme.of(context).textTheme.bodyMedium),
+                      const SizedBox(height: 6),
+                      Wrap(spacing: 6, runSpacing: 4, children: [
+                        for (final r in roles) StatusChip(roleLabel(r), tone: ChipTone.info),
+                        if (roles.isEmpty) const StatusChip('Member', tone: ChipTone.neutral),
+                      ]),
+                    ]),
+                  ),
+                ]),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: _uploading ? null : _changePhoto,
+                  icon: _uploading
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.photo_camera_outlined),
+                  label: const Text('Change photo'),
+                ),
+              ),
+              SectionCard(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Work', style: Theme.of(context).textTheme.titleSmall),
+                  const SizedBox(height: AppSpacing.sm),
+                  KeyValueRow('Department', nameOf(p['department']) ?? '—'),
+                  KeyValueRow('Team', nameOf(p['team']) ?? '—'),
+                  KeyValueRow('Reports to', nameOf(p['manager']) ?? '—'),
+                  KeyValueRow('Office', nameOf(p['office']) ?? 'Not assigned'),
+                  KeyValueRow(
+                      'Shift',
+                      shift == null
+                          ? 'Not assigned'
+                          : '${shift['name']}: ${clockLabel(shift['start_local'])}–${clockLabel(shift['end_local'])}, '
+                              '${weekdaysLabel((shift['weekly_mask'] as num?)?.toInt() ?? 31)}'
+                              '${shift['lunch_paid'] == true ? ' · lunch included' : ''}'),
+                  KeyValueRow('Joined', OrgTime.date(p['join_date'] as String?)),
+                  if (p['business_email'] != null) KeyValueRow('Work email', p['business_email'] as String),
+                  if (p['business_phone'] != null) KeyValueRow('Work phone', p['business_phone'] as String),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text('Changes to role, team, office or shift are made by HR.', style: Theme.of(context).textTheme.bodySmall),
+                ]),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SectionCard(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Text('Personal details', style: Theme.of(context).textTheme.titleSmall)),
+                    TextButton.icon(
+                      onPressed: () async {
+                        final saved = await showPrivateDetailsEditor(context, ref, private: private, own: true);
+                        if (saved) ref.invalidate(myProfileProvider);
+                      },
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Edit'),
+                    ),
+                  ]),
+                  Text('Visible only to you and HR.', style: Theme.of(context).textTheme.bodySmall),
+                  const SizedBox(height: AppSpacing.sm),
+                  PrivateDetailsView(private: private),
+                ]),
+              ),
+            ]),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class PrivateDetailsView extends StatelessWidget {
+  const PrivateDetailsView({super.key, required this.private});
+  final Map<String, dynamic> private;
+
+  @override
+  Widget build(BuildContext context) {
+    String v(String k) => (private[k] as String?) ?? '—';
+    return Column(children: [
+      KeyValueRow('Personal email', v('personal_email')),
+      KeyValueRow('Personal phone', v('personal_phone')),
+      KeyValueRow('Address', v('address')),
+      KeyValueRow('Emergency contact', private['emergency_contact_name'] == null
+          ? '—'
+          : '${private['emergency_contact_name']} · ${private['emergency_contact_phone'] ?? ''}'),
+      KeyValueRow('Date of birth', OrgTime.date(private['date_of_birth'] as String?, pattern: 'd MMM yyyy')),
+    ]);
+  }
+}
+
+/// Personal-details form shared by the own profile (update_my_profile) and
+/// HR's employee detail (update_private_details). Returns true when saved.
+Future<bool> showPrivateDetailsEditor(BuildContext context, WidgetRef ref,
+    {required Map<String, dynamic> private, required bool own, String? employeeId}) async {
+  final fields = {
+    'personal_email': TextEditingController(text: private['personal_email'] as String?),
+    'personal_phone': TextEditingController(text: private['personal_phone'] as String?),
+    'address': TextEditingController(text: private['address'] as String?),
+    'emergency_contact_name': TextEditingController(text: private['emergency_contact_name'] as String?),
+    'emergency_contact_phone': TextEditingController(text: private['emergency_contact_phone'] as String?),
+  };
+  DateTime? dob = DateTime.tryParse(private['date_of_birth'] as String? ?? '');
+  var busy = false;
+  String? error;
+  final saved = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (ctx) => StatefulBuilder(builder: (ctx, setState) {
+      Future<void> save() async {
+        setState(() {
+          busy = true;
+          error = null;
+        });
+        final patch = {
+          for (final e in fields.entries) e.key: e.value.text.trim().isEmpty ? null : e.value.text.trim(),
+          'date_of_birth': dob == null ? null : OrgTime.ymd(dob!),
+        };
+        try {
+          final api = ref.read(apiProvider);
+          final version = (private['version'] as num?)?.toInt() ?? 1;
+          if (own) {
+            await api.rpc('update_my_profile', {'p_patch': patch, 'p_expected_version': version});
+          } else {
+            await api.rpc('update_private_details',
+                {'p_employee_id': employeeId, 'p_patch': patch, 'p_expected_version': version});
+          }
+          if (ctx.mounted) Navigator.pop(ctx, true);
+        } on ApiException catch (e) {
+          setState(() {
+            busy = false;
+            error = e.message;
+          });
+        }
+      }
+
+      InputDecoration dec(String label) => InputDecoration(labelText: label);
+      return Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: ListView(shrinkWrap: true, padding: const EdgeInsets.all(AppSpacing.page), children: [
+          Text('Personal details', style: Theme.of(ctx).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.md),
+          TextField(controller: fields['personal_email'], keyboardType: TextInputType.emailAddress,
+              maxLength: 200, decoration: dec('Personal email')),
+          TextField(controller: fields['personal_phone'], keyboardType: TextInputType.phone,
+              maxLength: 40, decoration: dec('Personal phone')),
+          TextField(controller: fields['address'], maxLength: 500, minLines: 2, maxLines: 4, decoration: dec('Address')),
+          TextField(controller: fields['emergency_contact_name'], maxLength: 120, decoration: dec('Emergency contact name')),
+          TextField(controller: fields['emergency_contact_phone'], keyboardType: TextInputType.phone,
+              maxLength: 40, decoration: dec('Emergency contact phone')),
+          DateField(
+            label: 'Date of birth',
+            date: dob,
+            first: DateTime(1920),
+            last: OrgTime.today(),
+            onChanged: (d) => setState(() => dob = d),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(error!, style: const TextStyle(color: AppColors.error)),
+          ],
+          const SizedBox(height: AppSpacing.lg),
+          FilledButton(
+            onPressed: busy ? null : save,
+            child: busy
+                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4))
+                : const Text('Save'),
+          ),
+        ]),
+      );
+    }),
+  );
+  for (final c in fields.values) {
+    c.dispose();
+  }
+  return saved ?? false;
+}

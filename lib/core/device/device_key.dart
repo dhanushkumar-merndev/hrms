@@ -83,6 +83,21 @@ class DeviceKey {
   Future<String> sign(String alias, Uint8List payload, {required String title, required String subtitle}) =>
       _call<String>('sign', {'alias': alias, 'payload': payload, 'title': title, 'subtitle': subtitle});
 
+  /// Fingerprint first: unlocks ONE signature for [signAuthorized], so the
+  /// location can be read after the person confirms.
+  Future<void> authorize(String alias, {required String title, required String subtitle}) =>
+      _call<bool>('authorize', {'alias': alias, 'title': title, 'subtitle': subtitle});
+
+  Future<String> signAuthorized(Uint8List payload) => _call<String>('signAuthorized', {'payload': payload});
+
+  Future<void> clearAuthorized() async {
+    try {
+      await _call<bool>('clearAuthorized', const {});
+    } on DeviceKeyException {
+      // Nothing pending.
+    }
+  }
+
   Future<void> delete(String alias) => _call<bool>('deleteKey', {'alias': alias});
 }
 

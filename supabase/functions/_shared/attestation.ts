@@ -16,6 +16,9 @@
 import "npm:reflect-metadata@0.2.2"; // required by @peculiar/x509 (tsyringe)
 import * as x509 from "npm:@peculiar/x509@2.1.0";
 import { AsnConvert } from "npm:@peculiar/asn1-schema@2.10.0";
+import { SubjectPublicKeyInfo } from "npm:@peculiar/asn1-x509@2.10.0";
+import { p256 } from "npm:@noble/curves@1.9.7/p256";
+import { p384 } from "npm:@noble/curves@1.9.7/p384";
 import {
   AttestationApplicationId,
   KeyDescription,
@@ -209,6 +212,45 @@ function parseKeyDescription(ext: ArrayBuffer): ParsedDescription {
   }
 }
 
+const EC_CURVES: Record<string, typeof p256> = { "P-256": p256, "P-384": p384 };
+
+// Signed bytes of a certificate: the tbsCertificate element, sliced from the
+// original DER (never re-encoded).
+function tbsOf(cert: x509.X509Certificate): Uint8Array<ArrayBuffer> {
+  const der = new Uint8Array(cert.rawData);
+  const header = (at: number) => (der[at + 1] & 0x80 ? 2 + (der[at + 1] & 0x7f) : 2);
+  const length = (at: number) => {
+    const b = der[at + 1];
+    if (!(b & 0x80)) return b;
+    let n = 0;
+    for (let k = 0; k < (b & 0x7f); k++) n = n * 256 + der[at + 2 + k];
+    return n;
+  };
+  const start = header(0);
+  return der.slice(start, start + header(start) + length(start));
+}
+
+// One link of the chain. EC signatures are checked in pure JS: the Edge
+// runtime's WebCrypto only verifies matching curve/hash pairs, but TEE chains
+// commonly sign SHA-256 with a P-384 intermediate (seen on real phones).
+async function signedBy(cert: x509.X509Certificate, issuer: x509.X509Certificate): Promise<boolean> {
+  const keyAlg = issuer.publicKey.algorithm as EcKeyAlgorithm;
+  const sigAlg = cert.signatureAlgorithm as { name: string; hash?: { name: string } };
+  if (keyAlg.name !== "ECDSA" || sigAlg.name !== "ECDSA") {
+    return await cert.verify({ publicKey: issuer.publicKey, signatureOnly: true }).catch(() => false);
+  }
+  const curve = EC_CURVES[keyAlg.namedCurve];
+  const hash = sigAlg.hash?.name;
+  if (!curve || !hash || !["SHA-256", "SHA-384", "SHA-512"].includes(hash)) return false;
+  try {
+    const point = new Uint8Array(AsnConvert.parse(issuer.publicKey.rawData, SubjectPublicKeyInfo).subjectPublicKey);
+    const digest = new Uint8Array(await crypto.subtle.digest(hash, tbsOf(cert)));
+    return curve.verify(new Uint8Array(cert.signature), digest, point, { lowS: false, format: "der" });
+  } catch {
+    return false;
+  }
+}
+
 export async function verifyAndroidAttestation(
   chainB64: string[],
   expectedChallenge: Uint8Array,
@@ -227,8 +269,7 @@ export async function verifyAndroidAttestation(
   // 1. Signatures up the chain; the top certificate must be self-signed.
   for (let i = 0; i < chain.length; i++) {
     const issuer = chain[Math.min(i + 1, chain.length - 1)];
-    const ok = await chain[i].verify({ publicKey: issuer.publicKey, signatureOnly: true }).catch(() => false);
-    if (!ok) fail("Device verification chain is invalid.");
+    if (!await signedBy(chain[i], issuer)) fail("Device verification chain is invalid.");
   }
   const rootSpki = bytesToB64(new Uint8Array(chain[chain.length - 1].publicKey.rawData));
   const root: "google" | "unknown" = GOOGLE_ROOT_SPKIS.has(rootSpki) ? "google" : "unknown";
