@@ -5,6 +5,7 @@ import 'package:hrms/core/auth/session_controller.dart';
 import 'package:hrms/features/approvals/approvals_screen.dart';
 import 'package:hrms/features/employees/employee_new_screen.dart';
 import 'package:hrms/features/home/home_providers.dart';
+import 'package:hrms/features/home/home_screen.dart';
 import 'package:hrms/features/notifications/notifications_screen.dart';
 import 'package:hrms/features/payslips/payslips_screen.dart';
 
@@ -13,6 +14,58 @@ import 'support.dart';
 const _structure = {'departments': [], 'teams': [], 'offices': [], 'shifts': []};
 
 void main() {
+  testWidgets('home live clock renders every day phase at a compact 88px size', (tester) async {
+    final cases = [
+      (DateTime(2026, 10, 1, 8, 15), 'Office time 8:15 AM, morning'),
+      (DateTime(2026, 10, 1, 14, 30), 'Office time 2:30 PM, afternoon'),
+      (DateTime(2026, 10, 1, 18, 15), 'Office time 6:15 PM, sunset'),
+      (DateTime(2026, 10, 1, 22, 7), 'Office time 10:07 PM, night'),
+    ];
+
+    for (final (now, semantics) in cases) {
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(body: Center(child: HomeLiveClock(now: now))),
+      ));
+      expect(find.bySemanticsLabel(semantics), findsOneWidget);
+      expect(tester.getSize(find.byType(HomeLiveClock)), const Size.square(88));
+      expect(tester.takeException(), isNull);
+    }
+
+    await unmount(tester);
+  });
+
+  testWidgets('home shift details stay readable on a narrow phone', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await pumpScreen(tester, const HomeScreen(), session: testSession(), handler: (fn, _) => {
+          'org': {'name': 'Test Org', 'timezone': 'Asia/Kolkata'},
+          'me': {'name': 'Asha Rao', 'has_avatar': false},
+          'shift': {
+            'shift_date': '2026-10-01',
+            'kind': 'workday',
+            'is_required': true,
+            'start_at': '2026-10-01T04:30:00Z',
+            'end_at': '2026-10-01T13:30:00Z',
+            'required_seconds': 32400,
+            'lunch_paid': true,
+            'blocked_reason': 'window_closed',
+            'session_state': 'not_started',
+          },
+          'team': null,
+          'upcoming_holidays': [],
+          'extras': {},
+          'exception_days': 0,
+          'pending_reviews': 0,
+          'unassigned_reviews': 0,
+          'unread_notifications': 0,
+        });
+
+    expect(find.text('10:00 AM–7:00 PM\n9 h · Lunch included'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
+
   testWidgets('S14 lists salary-month slots with honest statuses (FILE-009/010)', (tester) async {
     await pumpScreen(tester, const PayslipsScreen(), session: testSession(), handler: (fn, _) => switch (fn) {
           'list_my_payslips' => {

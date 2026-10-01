@@ -256,20 +256,40 @@ _DayPhase _getDayPhase(DateTime now) {
 
 /// Live office-time clock (org time zone, not the device zone) with dynamic
 /// celestial body (Sun during the day, Moon & stars at night).
-class _LiveClock extends StatefulWidget {
-  const _LiveClock();
+class HomeLiveClock extends StatefulWidget {
+  const HomeLiveClock({super.key, this.now});
+
+  /// An organisation-local time used by previews and widget tests.
+  /// Production leaves this null so the clock remains live.
+  final DateTime? now;
 
   @override
-  State<_LiveClock> createState() => _LiveClockState();
+  State<HomeLiveClock> createState() => _HomeLiveClockState();
 }
 
-class _LiveClockState extends State<_LiveClock> {
+class _HomeLiveClockState extends State<HomeLiveClock> {
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 15), (_) => setState(() {}));
+    _startTimerIfLive();
+  }
+
+  @override
+  void didUpdateWidget(HomeLiveClock oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if ((oldWidget.now == null) != (widget.now == null)) {
+      _timer?.cancel();
+      _timer = null;
+      _startTimerIfLive();
+    }
+  }
+
+  void _startTimerIfLive() {
+    if (widget.now == null) {
+      _timer = Timer.periodic(const Duration(seconds: 15), (_) => setState(() {}));
+    }
   }
 
   @override
@@ -280,7 +300,7 @@ class _LiveClockState extends State<_LiveClock> {
 
   @override
   Widget build(BuildContext context) {
-    final now = OrgTime.local(DateTime.now().toUtc());
+    final now = widget.now ?? OrgTime.local(DateTime.now().toUtc());
     final phase = _getDayPhase(now);
 
     final (dialColors, borderColor, shadowColor, textColor, textSecColor) = switch (phase) {
@@ -317,8 +337,8 @@ class _LiveClockState extends State<_LiveClock> {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 600),
       curve: Curves.easeInOut,
-      width: 96,
-      height: 96,
+      width: 88,
+      height: 88,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -335,13 +355,15 @@ class _LiveClockState extends State<_LiveClock> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Dynamic Celestial Body touching the outer edge of the dial
+          // Dynamic celestial body inset from the edge of the dial.
           Positioned(
-            right: -2,
-            top: -2,
+            // Keep the whole body and its glow inside the dial. Negative
+            // offsets clipped the moon against the top-right edge.
+            right: 5,
+            top: 5,
             child: SizedBox(
-              width: 48,
-              height: 48,
+              width: 32,
+              height: 32,
               child: switch (phase) {
                 _DayPhase.morning => const CustomPaint(painter: _DaySunPainter(isMorning: true)),
                 _DayPhase.afternoon => const CustomPaint(painter: _DaySunPainter(isMorning: false)),
@@ -358,7 +380,7 @@ class _LiveClockState extends State<_LiveClock> {
                 TextSpan(
                   text: DateFormat('h:mm').format(now),
                   style: TextStyle(
-                    fontSize: 21,
+                    fontSize: 20,
                     fontWeight: FontWeight.w700,
                     color: textColor,
                     letterSpacing: -0.3,
@@ -367,7 +389,7 @@ class _LiveClockState extends State<_LiveClock> {
                 TextSpan(
                   text: ' ${DateFormat('a').format(now)}',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                     color: textSecColor,
                   ),
@@ -434,33 +456,43 @@ class _SunsetSunPainter extends CustomPainter {
     final w = size.width;
     final h = size.height;
     final cx = w * 0.5;
-    final cy = h * 0.5;
-    final r = w * 0.46;
+    final horizonY = h * 0.7;
+    final sunCenter = Offset(cx, h * 0.57);
+    final sunRadius = w * 0.27;
 
-    // Sunset glow
+    // A restrained amber glow keeps the small icon warm without turning it
+    // into a fuzzy coral blob.
     final glowPaint = Paint()
-      ..color = const Color(0x40FF6E40)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
-    canvas.drawCircle(Offset(cx, cy), r, glowPaint);
+      ..color = const Color(0x45FF8A3D)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawCircle(sunCenter, sunRadius * 1.3, glowPaint);
 
-    // Sun disc
+    // Clip the lower edge so the disc reads as a sun settling into the
+    // horizon rather than another daytime sun.
+    canvas.save();
+    canvas.clipRect(Rect.fromLTRB(0, 0, w, horizonY));
     final sunPaint = Paint()
       ..shader = const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Color(0xFFFF8A65), Color(0xFFFF5722)],
+        colors: [Color(0xFFFFC44D), Color(0xFFFF6B45)],
       ).createShader(Rect.fromLTWH(0, 0, w, h));
-    canvas.drawCircle(Offset(cx, cy), r, sunPaint);
+    canvas.drawCircle(sunCenter, sunRadius, sunPaint);
+    canvas.restore();
 
-    // Soft dusk cloud layer across the lower third of the sun
-    final cloudPaint = Paint()
-      ..color = const Color(0x59FFF1EB)
-      ..style = PaintingStyle.fill;
-    final cloudRect = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(cx, cy + r * 0.45), width: r * 1.5, height: r * 0.35),
-      Radius.circular(r * 0.18),
-    );
-    canvas.drawRRect(cloudRect, cloudPaint);
+    final accentPaint = Paint()
+      ..color = const Color(0xFFFF754B)
+      ..strokeWidth = math.max(1.2, w * 0.055)
+      ..strokeCap = StrokeCap.round;
+
+    // Three subtle rays above the sun.
+    canvas.drawLine(Offset(cx, h * 0.08), Offset(cx, h * 0.22), accentPaint);
+    canvas.drawLine(Offset(w * 0.24, h * 0.2), Offset(w * 0.33, h * 0.3), accentPaint);
+    canvas.drawLine(Offset(w * 0.76, h * 0.2), Offset(w * 0.67, h * 0.3), accentPaint);
+
+    // Crisp horizon lines replace the old opaque stripe across the disc.
+    canvas.drawLine(Offset(w * 0.12, horizonY), Offset(w * 0.88, horizonY), accentPaint);
+    canvas.drawLine(Offset(w * 0.3, h * 0.84), Offset(w * 0.7, h * 0.84), accentPaint);
   }
 
   @override
@@ -555,26 +587,25 @@ class _ShiftCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const _LiveClock(),
-                const SizedBox(width: AppSpacing.lg),
+                const HomeLiveClock(),
+                const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Flexible(
-                            child: Text(
-                              DateFormat('EEEE').format(today),
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.text,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          Text(
+                            DateFormat('EEEE').format(today),
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.text,
                             ),
                           ),
-                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                             decoration: BoxDecoration(
@@ -608,20 +639,24 @@ class _ShiftCard extends StatelessWidget {
                       if (s != null && s['is_required'] == true) ...[
                         const SizedBox(height: 6),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.schedule_rounded, size: 14, color: AppColors.textSecondary),
+                            const Padding(
+                              padding: EdgeInsets.only(top: 2),
+                              child: Icon(Icons.schedule_rounded, size: 14, color: AppColors.textSecondary),
+                            ),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
-                                '${OrgTime.time(s['start_at'])}–${OrgTime.time(s['end_at'])} · ${OrgTime.hm(expected)}'
-                                '${lunchPaid ? ' · lunch included' : ''}',
+                                '${OrgTime.time(s['start_at'])}–${OrgTime.time(s['end_at'])}\n'
+                                '${OrgTime.hm(expected)}${lunchPaid ? ' · Lunch included' : ''}',
                                 style: const TextStyle(
                                   fontSize: 12,
+                                  height: 1.3,
                                   fontWeight: FontWeight.w500,
                                   color: AppColors.textSecondary,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                maxLines: 2,
                               ),
                             ),
                           ],
@@ -1013,15 +1048,17 @@ class _PayslipCard extends StatelessWidget {
         SectionHeader(title: 'Payslip', onMore: () => context.push('/payslips')),
         const SizedBox(height: AppSpacing.sm),
         Row(children: [
-          const Illustration('piggy', size: 84),
-          const Spacer(),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(month == null ? 'No payslip yet' : OrgTime.date(month, pattern: 'MMM yyyy'),
-                style: Theme.of(context).textTheme.titleSmall),
-            const SizedBox(height: 4),
-            Text(month == null ? 'Published payslips appear here' : 'Payslip available',
-                style: Theme.of(context).textTheme.bodyMedium),
-          ]),
+          const Illustration('piggy', size: 72),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(month == null ? 'No payslip yet' : OrgTime.date(month, pattern: 'MMM yyyy'),
+                  textAlign: TextAlign.end, style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 4),
+              Text(month == null ? 'Published payslips appear here' : 'Payslip available',
+                  maxLines: 2, textAlign: TextAlign.end, style: Theme.of(context).textTheme.bodyMedium),
+            ]),
+          ),
         ]),
         if (month != null) ...[
           const SizedBox(height: AppSpacing.md),
