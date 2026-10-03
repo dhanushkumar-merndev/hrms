@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hrms/core/device/local_auth.dart';
+import 'package:hrms/features/salary/bank_details_request_screen.dart';
 import 'package:hrms/features/salary/my_salary_screen.dart';
 
 import 'support.dart';
@@ -40,6 +41,50 @@ const _salary = {
 };
 
 void main() {
+  testWidgets(
+    'BANK-UI-001 Member bank changes are submitted for verification',
+    (tester) async {
+      await pumpScreen(
+        tester,
+        const BankDetailsRequestScreen(),
+        session: testSession(),
+        handler: (_, _) => null,
+      );
+      expect(
+        find.textContaining('HR or Admin verifies each change'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('Submit for approval', skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(find.text('Save now', skipOffstage: false), findsNothing);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'BANK-UI-002 Admin bank changes apply immediately and are audited',
+    (tester) async {
+      await pumpScreen(
+        tester,
+        const BankDetailsRequestScreen(),
+        session: testSession(roles: const ['admin'], permissions: const ['*']),
+        handler: (_, _) => null,
+      );
+      expect(
+        find.textContaining('apply immediately and are audited'),
+        findsOneWidget,
+      );
+      expect(find.text('Save now', skipOffstage: false), findsOneWidget);
+      expect(
+        find.text('Submit for approval', skipOffstage: false),
+        findsNothing,
+      );
+      await unmount(tester);
+    },
+  );
+
   testWidgets(
     'SAL-UI-001 salary stays masked and is not even fetched until the fingerprint check passes',
     (tester) async {

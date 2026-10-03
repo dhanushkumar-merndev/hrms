@@ -33,6 +33,7 @@ String requestTitle(Map<String, dynamic> r) {
         ? 'Bank account change'
         : 'Bank details setup';
   }
+  if (r['change_category'] case final String category) return category;
   final t = (r['leave_type'] as Map?)?['name'] as String?;
   return t ?? 'Leave';
 }
@@ -42,6 +43,9 @@ String requestDates(Map<String, dynamic> r) {
     return OrgTime.date(r['target_shift_date'] as String?);
   }
   if (r['kind'] == 'bank_details') {
+    return 'Submitted ${OrgTime.date(r['submitted_at'] as String?)}';
+  }
+  if (r['change_category'] != null) {
     return 'Submitted ${OrgTime.date(r['submitted_at'] as String?)}';
   }
   final s = r['start_date'] as String?;
@@ -207,6 +211,28 @@ class RevisionView extends StatelessWidget {
         ],
       );
     }
+    if (kind == 'profile_details') {
+      final patch = ((payload['patch'] as Map?) ?? const {})
+          .cast<String, dynamic>();
+      const labels = {
+        'personal_email': 'Personal email',
+        'personal_phone': 'Personal phone',
+        'address': 'Address',
+        'emergency_contact_name': 'Emergency contact name',
+        'emergency_contact_phone': 'Emergency contact phone',
+        'date_of_birth': 'Date of birth',
+      };
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final entry in patch.entries)
+            KeyValueRow(
+              labels[entry.key] ?? entry.key,
+              entry.value == null ? 'Cleared' : '${entry.value}',
+            ),
+        ],
+      );
+    }
     if (kind == 'correction') {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -303,12 +329,20 @@ class EventTimeline extends StatelessWidget {
     'resubmitted' => (Icons.event_repeat_rounded, AppColors.attendanceCard),
     'edited' => (Icons.edit_note_rounded, AppColors.salaryCard),
     'opened' => (Icons.preview_outlined, AppColors.leaveCard),
-    'approved' || 'withdrawal_accepted' || 'cancellation_approved' => (Icons.check_circle_rounded, AppColors.successSoft),
+    'approved' || 'withdrawal_accepted' || 'cancellation_approved' => (
+      Icons.check_circle_rounded,
+      AppColors.successSoft,
+    ),
     'auto_approved' => (Icons.verified_rounded, AppColors.successSoft),
-    'rejected' || 'withdrawal_declined' || 'cancellation_declined' => (Icons.cancel_rounded, AppColors.errorSoft),
+    'rejected' ||
+    'withdrawal_declined' ||
+    'cancellation_declined' => (Icons.cancel_rounded, AppColors.errorSoft),
     'returned' => (Icons.history_rounded, AppColors.warningSoft),
     'revoked' => (Icons.settings_backup_restore_rounded, AppColors.errorSoft),
-    'withdrawn' || 'withdrawal_requested' || 'cancellation_requested' => (Icons.event_busy_rounded, AppColors.warningSoft),
+    'withdrawn' || 'withdrawal_requested' || 'cancellation_requested' => (
+      Icons.event_busy_rounded,
+      AppColors.warningSoft,
+    ),
     'reassigned' => (Icons.person_search_outlined, AppColors.workspaceCard),
     'holiday_reconciled' => (Icons.celebration_rounded, AppColors.holidayCard),
     _ => (Icons.task_alt_rounded, AppColors.attendanceCard),
@@ -327,42 +361,54 @@ class EventTimeline extends StatelessWidget {
                 // Rail: illustration bubble with a line joining the next step.
                 SizedBox(
                   width: 44,
-                  child: Column(children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: _art(events[i]['action'] as String?).$2,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.surface, width: 2),
-                      ),
-                      alignment: Alignment.center,
-                      child: AppIcon(_art(events[i]['action'] as String?).$1, size: 24),
-                    ),
-                    if (i < events.length - 1)
-                      Expanded(
-                        child: Container(
-                          width: 2,
-                          margin: const EdgeInsets.symmetric(vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.border,
-                            borderRadius: BorderRadius.circular(1),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: _art(events[i]['action'] as String?).$2,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.surface,
+                            width: 2,
                           ),
                         ),
+                        alignment: Alignment.center,
+                        child: AppIcon(
+                          _art(events[i]['action'] as String?).$1,
+                          size: 24,
+                        ),
                       ),
-                  ]),
+                      if (i < events.length - 1)
+                        Expanded(
+                          child: Container(
+                            width: 2,
+                            margin: const EdgeInsets.symmetric(vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.border,
+                              borderRadius: BorderRadius.circular(1),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Padding(
-                    padding: EdgeInsets.only(top: 2, bottom: i < events.length - 1 ? AppSpacing.lg : 0),
+                    padding: EdgeInsets.only(
+                      top: 2,
+                      bottom: i < events.length - 1 ? AppSpacing.lg : 0,
+                    ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           '${_label(events[i]['action'] as String?)}'
                           '${events[i]['revision_no'] != null ? ' · v${events[i]['revision_no']}' : ''}',
-                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 2),
                         Text(
@@ -372,7 +418,10 @@ class EventTimeline extends StatelessWidget {
                         if (events[i]['reason'] != null) ...[
                           const SizedBox(height: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.background,
                               borderRadius: BorderRadius.circular(10),

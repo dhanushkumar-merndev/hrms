@@ -50,7 +50,7 @@ select test.eq((select reviewer_id from change_test where name = 'hr_route'), te
 
 -- The six new kinds are valid without weakening leave/correction constraints.
 insert into hrms.requests (org_id, employee_id, kind, state, assigned_reviewer_id, route_snapshot, submitted_at)
-select test.org('TEST_ORG'), test.emp('EMP01'), kind, 'submitted',
+select test.org('TEST_ORG'), test.emp('EMP01'), kind, 'cancelled',
        (select reviewer_id from change_test where name = 'employee_route'),
        jsonb_build_object(
          'initiator_id', test.emp('EMP01'), 'initiator_class', 'employee',

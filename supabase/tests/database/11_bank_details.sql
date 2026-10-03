@@ -1,5 +1,5 @@
--- BANK-001..008: employees submit private bank proof; initial setup is
--- HR/Admin approved, later changes are Admin-only, immutable and audited.
+-- BANK-001..008: employees submit private bank proof; routing follows the
+-- maker's role, approved values are immutable, and every apply is audited.
 begin;
 select test.standard_org();
 
@@ -89,7 +89,7 @@ select test.throws(format($q$select public.set_employee_salary(
   %L, '{"bank_name":"Bypass Bank"}', 'bypass', 2)$q$, test.emp('EMP01')),
   'REQUEST_REQUIRED', 'BANK-004 direct HR bank update is blocked');
 
--- BANK-005 a later change needs a reason and routes only to Admin.
+-- BANK-005 a later change needs a reason and still follows Member routing.
 select test.login('EMP01');
 select test.throws(format($q$select public.save_bank_details_request(
   null, 'ICICI Bank', 'Employee E1', '99998888', 'ICIC0004321', null, %L, null, %L)$q$,
@@ -101,21 +101,18 @@ update bank_test set change_request = (
   -> 'data' ->> 'id')::uuid;
 select test.eq(public.get_my_request((select change_request from bank_test))
                  -> 'data' ->> 'request_mode', 'change',
-  'BANK-005 change records the Admin-only approval rule');
+  'BANK-005 change records that approved details are being replaced');
 select test.eq(public.get_my_request((select change_request from bank_test))
-                 -> 'data' -> 'reviewer' ->> 'id', test.emp('ADMIN01')::text,
-  'BANK-005 approved-account change routes to Admin');
+                 -> 'data' -> 'reviewer' ->> 'id', test.emp('HR01')::text,
+  'BANK-005 Member bank changes prefer HR under initiator-based routing');
 
--- BANK-006 HR cannot open or decide the change; Admin can approve it.
+-- BANK-006 assigned HR may approve a Member change.
 select test.login('HR01');
-select test.throws(format('select public.open_request_for_review(%L, null)',
-  (select change_request from bank_test)), 'ACCESS_DENIED', 'BANK-006 HR cannot review a bank change');
-select test.login('ADMIN01');
 select public.open_request_for_review((select change_request from bank_test), null);
 select public.decide_request((select change_request from bank_test), 'approve', null, 2);
 select test.login('EMP01');
 select test.eq(public.get_my_salary() -> 'data' -> 'profile' ->> 'bank_name', 'ICICI Bank',
-  'BANK-006 Admin-approved change is applied');
+  'BANK-006 HR-approved Member change is applied');
 select test.eq(public.get_my_salary() -> 'data' -> 'profile' ->> 'account_last4', '8888',
   'BANK-006 new account remains masked to last four');
 

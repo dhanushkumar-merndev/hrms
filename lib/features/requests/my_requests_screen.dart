@@ -215,6 +215,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
           final editPath = switch (kind) {
             'leave' => '/leave/apply?edit=${widget.id}',
             'bank_details' => '/salary/bank-details?edit=${widget.id}',
+            'profile_details' => '/profile?edit=${widget.id}',
             _ => '/corrections/new?edit=${widget.id}',
           };
 

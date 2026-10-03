@@ -82,7 +82,11 @@ final List<RouteBase> featureRoutes = [
     builder: (_, s) =>
         BankDetailsRequestScreen(editRequestId: s.uri.queryParameters['edit']),
   ),
-  AppRoute(path: '/profile', builder: (_, _) => const ProfileScreen()),
+  AppRoute(
+    path: '/profile',
+    builder: (_, s) =>
+        ProfileScreen(editRequestId: s.uri.queryParameters['edit']),
+  ),
   AppRoute(path: '/people', builder: (_, _) => const PeopleScreen()),
   AppRoute(path: '/documents', builder: (_, _) => const DocumentsScreen()),
   AppRoute(
@@ -97,7 +101,8 @@ final List<RouteBase> featureRoutes = [
   AppRoute(path: '/workspace', builder: (_, _) => const WorkspaceScreen()),
   AppRoute(
     path: '/approvals',
-    builder: (_, s) => ApprovalsScreen(initialScope: s.uri.queryParameters['scope']),
+    builder: (_, s) =>
+        ApprovalsScreen(initialScope: s.uri.queryParameters['scope']),
   ),
   AppRoute(
     path: '/approvals/:id',
@@ -142,7 +147,10 @@ final List<RouteBase> featureRoutes = [
         TeamsScreen(initialSection: s.uri.queryParameters['section']),
   ),
   AppRoute(path: '/admin/offices', builder: (_, _) => const OfficesScreen()),
-  AppRoute(path: '/admin/outside-work', builder: (_, _) => const OutsideWorkScreen()),
+  AppRoute(
+    path: '/admin/outside-work',
+    builder: (_, _) => const OutsideWorkScreen(),
+  ),
   AppRoute(path: '/admin/shifts', builder: (_, _) => const ShiftsScreen()),
   AppRoute(
     path: '/admin/leave-policies',

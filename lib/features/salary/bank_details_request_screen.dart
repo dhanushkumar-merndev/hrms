@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
+import '../../core/auth/session_controller.dart';
 import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
@@ -116,15 +117,18 @@ class _BankDetailsRequestScreenState
   }
 
   Future<void> _submit() async {
+    final isAdmin = ref.read(sessionContextProvider)?.isAdmin ?? false;
     final ok = await confirm(
       context,
-      title: widget.editRequestId == null
+      title: isAdmin
+          ? 'Save bank details now?'
+          : widget.editRequestId == null
           ? 'Submit bank details?'
           : 'Resubmit bank details?',
-      message:
-          'Your proof and these details are locked into this request. '
-          'First-time setup may be approved by HR or Admin; changes to approved details require Admin approval.',
-      confirmLabel: 'Submit',
+      message: isAdmin
+          ? 'Your validated bank details will apply immediately and the change will be recorded in audit history.'
+          : 'Your proof and these details are locked into this request. Your current approved bank details remain active until HR or Admin verifies it.',
+      confirmLabel: isAdmin ? 'Save now' : 'Submit',
     );
     if (!ok) return;
     setState(() {
@@ -147,8 +151,14 @@ class _BankDetailsRequestScreenState
       ref.invalidate(myRequestsProvider);
       ref.invalidate(homeSummaryProvider);
       if (!mounted) return;
-      showMessage(context, 'Bank details submitted for approval.');
-      if (widget.editRequestId != null) {
+      final applied = res.map['applied'] == true;
+      showMessage(
+        context,
+        applied
+            ? 'Bank details saved and audited.'
+            : 'Bank details submitted for verification.',
+      );
+      if (applied || widget.editRequestId != null) {
         context.pop(true);
       } else {
         context.pushReplacement('/requests/${res.map['id']}');
@@ -173,6 +183,7 @@ class _BankDetailsRequestScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isAdmin = ref.watch(sessionContextProvider)?.isAdmin ?? false;
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -191,7 +202,7 @@ class _BankDetailsRequestScreenState
                 AppSpacing.xxl,
               ),
               children: [
-                const SectionCard(
+                SectionCard(
                   color: AppColors.attendanceCard,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,8 +214,9 @@ class _BankDetailsRequestScreenState
                       SizedBox(width: AppSpacing.md),
                       Expanded(
                         child: Text(
-                          'Your bank proof is private. Approved details are locked; every later change '
-                          'creates a new request that only an Admin can approve.',
+                          isAdmin
+                              ? 'Your bank proof is private. As an Admin, validated changes apply immediately and are audited.'
+                              : 'Your bank proof is private. Approved details stay active while HR or Admin verifies each change.',
                         ),
                       ),
                     ],
@@ -330,7 +342,9 @@ class _BankDetailsRequestScreenState
                         )
                       : const AppIcon(Icons.send_rounded),
                   label: Text(
-                    widget.editRequestId == null
+                    isAdmin
+                        ? 'Save now'
+                        : widget.editRequestId == null
                         ? 'Submit for approval'
                         : 'Resubmit for approval',
                   ),
