@@ -56,48 +56,69 @@ void main() {
     },
   );
 
-  testWidgets('SUPPORT-UI-004 configured number is a telephone action', (
+  testWidgets('SUPPORT-UI-004 configured contact opens support action modal', (
     tester,
   ) async {
-    Uri? opened;
+    final opened = <Uri>[];
     await pumpLogin(
       tester,
       support: () async => SupportPhone.parse('+91 98765 43210'),
       launch: (uri) async {
-        opened = uri;
+        opened.add(uri);
         return true;
       },
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Forgot your password? Contact HR:'), findsOneWidget);
-    await tester.tap(find.widgetWithText(TextButton, '+91 98765 43210'));
+    await tester.tap(
+      find.widgetWithText(TextButton, 'Forgot your password? Contact HR'),
+    );
     await tester.pumpAndSettle();
-    expect(opened, Uri.parse('tel:+919876543210'));
+    expect(find.text('Contact HR'), findsOneWidget);
+    expect(find.text('+91 98765 43210'), findsOneWidget);
+    expect(find.text('Call HR'), findsOneWidget);
+    expect(find.text('WhatsApp HR'), findsOneWidget);
+    expect(find.text('Copy number'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, 'Call HR'));
+    await tester.pumpAndSettle();
+    expect(opened, [Uri.parse('tel:+919876543210')]);
+
+    await tester.tap(find.widgetWithText(OutlinedButton, 'WhatsApp HR'));
+    await tester.pumpAndSettle();
+    expect(opened, [
+      Uri.parse('tel:+919876543210'),
+      Uri.parse('https://wa.me/919876543210'),
+    ]);
   });
 
-  testWidgets(
-    'SUPPORT-UI-005 failed telephone launch offers and confirms copy',
-    (tester) async {
-      String? copied;
-      await pumpLogin(
-        tester,
-        support: () async => SupportPhone.parse('+91 98765 43210'),
-        launch: (_) async => false,
-        copy: (value) async => copied = value,
-      );
-      await tester.pumpAndSettle();
+  testWidgets('SUPPORT-UI-005 modal copies number and reports launch failure', (
+    tester,
+  ) async {
+    String? copied;
+    await pumpLogin(
+      tester,
+      support: () async => SupportPhone.parse('+91 98765 43210'),
+      launch: (_) async => false,
+      copy: (value) async => copied = value,
+    );
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(TextButton, '+91 98765 43210'));
-      await tester.pumpAndSettle();
-      expect(find.widgetWithText(TextButton, 'Copy number'), findsOneWidget);
+    await tester.tap(
+      find.widgetWithText(TextButton, 'Forgot your password? Contact HR'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(TextButton, 'Copy number'), findsOneWidget);
 
-      await tester.tap(find.widgetWithText(TextButton, 'Copy number'));
-      await tester.pumpAndSettle();
-      expect(copied, '+91 98765 43210');
-      expect(find.text('Number copied.'), findsOneWidget);
-    },
-  );
+    await tester.tap(find.widgetWithText(FilledButton, 'Call HR'));
+    await tester.pumpAndSettle();
+    expect(find.text('Could not open the phone app.'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(TextButton, 'Copy number'));
+    await tester.pumpAndSettle();
+    expect(copied, '+91 98765 43210');
+    expect(find.text('Number copied.'), findsOneWidget);
+  });
 
   testWidgets('SUPPORT-UI-006 Admin edits and saves the HR support phone', (
     tester,

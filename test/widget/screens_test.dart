@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hrms/app/theme.dart';
 import 'package:hrms/core/auth/session_controller.dart';
 import 'package:hrms/features/action/action_screen.dart';
 import 'package:hrms/features/approvals/approvals_screen.dart';
@@ -346,6 +347,13 @@ void main() {
     expect(find.text('HR'), findsOneWidget);
     expect(find.text('Admin'), findsOneWidget);
     expect(find.byType(Divider), findsWidgets);
+    final actionList = tester.widget<ListView>(
+      find.byKey(const Key('action-list')),
+    );
+    expect(
+      actionList.padding?.resolve(TextDirection.ltr).top,
+      greaterThanOrEqualTo(AppSpacing.xl),
+    );
     expect(find.text('My attendance'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('My requests'), 400);
     expect(find.text('My requests'), findsOneWidget);
@@ -363,8 +371,17 @@ void main() {
     expect(find.text('Administration'), findsOneWidget);
     expect(find.text('Review requests'), findsNothing);
     // Frequent admin settings are one tap away in Action too.
-    for (final label in ['Outside work', 'Offices & Wi-Fi', 'Weekly off', 'Roles & permissions']) {
-      await tester.scrollUntilVisible(find.text(label), 200, scrollable: find.byType(Scrollable).last);
+    for (final label in [
+      'Outside work',
+      'Offices & Wi-Fi',
+      'Weekly off',
+      'Roles & permissions',
+    ]) {
+      await tester.scrollUntilVisible(
+        find.text(label),
+        200,
+        scrollable: find.byType(Scrollable).last,
+      );
       expect(find.text(label), findsOneWidget);
     }
     await unmount(tester);

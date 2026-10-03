@@ -304,9 +304,10 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
                   ref.invalidate(myRequestsProvider);
                 },
                 child: ListView(
+                  key: const Key('action-list'),
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.page,
-                    AppSpacing.md,
+                    AppSpacing.xl,
                     AppSpacing.page,
                     AppSpacing.xl,
                   ),
@@ -377,11 +378,7 @@ const _tabCardShadow = [
     offset: Offset(0, 4),
     spreadRadius: -1,
   ),
-  BoxShadow(
-    color: Color(0x0D263342),
-    blurRadius: 6,
-    offset: Offset(0, 1),
-  ),
+  BoxShadow(color: Color(0x0D263342), blurRadius: 6, offset: Offset(0, 1)),
 ];
 
 class _CompactCategoryBar extends StatelessWidget {

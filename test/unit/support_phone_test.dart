@@ -9,6 +9,7 @@ void main() {
 
       expect(phone?.display, '+91 98765 43210');
       expect(phone?.uri, Uri.parse('tel:+919876543210'));
+      expect(phone?.whatsAppUri, Uri.parse('https://wa.me/919876543210'));
     },
   );
 
