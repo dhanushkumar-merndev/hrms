@@ -6,6 +6,8 @@ import '../../core/widgets/cards.dart';
 (String, ChipTone, IconData) dayStatus(Map<String, dynamic> r) {
   final status = r['status'] as String?;
   return switch (status) {
+    'upcoming' when r['effective_source'] == 'outside' => ('Outside work', ChipTone.info, Icons.work_outline_rounded),
+    'present' when r['effective_source'] == 'outside' => ('Outside work', ChipTone.success, Icons.work_outline_rounded),
     'present' => r['is_late'] == true
         ? ('Present · late', ChipTone.warning, Icons.schedule_rounded)
         : ('Present', ChipTone.success, Icons.check_circle_outline_rounded),
@@ -32,5 +34,6 @@ String leaveSlotLabel(int slots) => switch (slots) {
 String sourceLabel(String? source) => switch (source) {
       'manual' => 'Manual (approved correction)',
       'mixed' => 'Corrected',
+      'outside' => 'Outside work (granted by Admin)',
       _ => 'Location verified',
     };

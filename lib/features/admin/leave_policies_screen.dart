@@ -8,6 +8,7 @@ import '../../core/auth/session_controller.dart';
 import '../../core/time/org_time.dart';
 import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
+import '../../core/widgets/info_button.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
 import '../../core/widgets/pickers.dart';
@@ -289,13 +290,15 @@ class _EntitlementsTabState extends ConsumerState<_EntitlementsTab> {
             Expanded(child: Text('Leave year $year', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium)),
             IconButton(tooltip: 'Next year', onPressed: () => setState(() => _year = year + 1),
                 icon: const AppIcon(Icons.chevron_right_rounded)),
+            const SizedBox(width: AppSpacing.xs),
+            const InfoButton(
+              size: 48,
+              title: 'Leave policies',
+              message: 'Publishing allocates the yearly days to every active employee once and moves capped '
+                  'carry-forward from the previous year exactly once.\n\nNew joiners receive published entitlements '
+                  'automatically.\n\nCompany holidays are managed separately.',
+            ),
           ]),
-          SectionCard(
-            color: AppColors.leaveCard,
-            child: Text('Publishing allocates the yearly days to every active employee once and moves capped carry-forward '
-                'from the previous year exactly once. New joiners receive published entitlements automatically. '
-                'Company holidays are managed separately.', style: Theme.of(context).textTheme.bodyMedium),
-          ),
           const SizedBox(height: AppSpacing.md),
           if (paidTypes.isEmpty) const EmptyState(icon: Icons.beach_access_outlined, title: 'Add a paid leave type first'),
           for (final t in paidTypes)
@@ -553,7 +556,13 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
         final target = (d['target'] as num?)?.toInt() ?? 12;
         final today = OrgTime.today();
         final selectable = _selected.where((id) => list.any((h) => h['id'] == id && h['state'] == 'draft')).toList();
-        return ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
+        final list_ = ListView(padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.page, AppSpacing.page, 96), children: [
+          _SaturdayOffCard(
+            mask: (d['saturday_off_weeks'] as num?)?.toInt() ?? 0,
+            canEdit: d['can_set_weekly_off'] == true,
+            onSaved: _reload,
+          ),
+          const SizedBox(height: AppSpacing.md),
           Row(children: [
             IconButton(tooltip: 'Previous year', onPressed: () => setState(() => _year--), icon: const AppIcon(Icons.chevron_left_rounded)),
             Expanded(child: Text('$_year', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium)),
@@ -690,10 +699,121 @@ class _HolidaysTabState extends ConsumerState<_HolidaysTab> {
               ]);
             },
           ),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Weekly offs follow each shift\'s working days.', style: Theme.of(context).textTheme.bodySmall),
+        ]);
+        // Ticking a draft shows a floating publish bar, wherever you scrolled.
+        return Stack(children: [
+          list_,
+          if (selectable.isNotEmpty)
+            Positioned(
+              left: AppSpacing.page,
+              right: AppSpacing.page,
+              bottom: AppSpacing.md,
+              child: SafeArea(
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    final ok = await confirm(context,
+                        title: 'Publish ${selectable.length} holiday(s)?',
+                        message: 'Schedules are updated and anyone with leave booked on these dates gets it back.',
+                        confirmLabel: 'Publish');
+                    if (!ok || !context.mounted) return;
+                    await _run(context, () async {
+                      final res = (await ref.read(apiProvider).rpc('publish_holidays', {'p_ids': selectable})).map;
+                      _selected.clear();
+                      _reload();
+                      if (context.mounted && (res['leave_days_reconciled'] as num? ?? 0) > 0) {
+                        showMessage(context, '${res['leave_days_reconciled']} booked leave day(s) were returned.');
+                      }
+                    }, done: 'Published.');
+                  },
+                  icon: const Icon(Icons.publish_rounded),
+                  label: Text('Publish selected (${selectable.length})'),
+                ),
+              ),
+            ),
         ]);
       },
+    );
+  }
+}
+
+/// Sunday is always the weekly off; Admin picks which Saturdays are off too.
+class _SaturdayOffCard extends ConsumerStatefulWidget {
+  const _SaturdayOffCard({required this.mask, required this.canEdit, required this.onSaved});
+  final int mask;
+  final bool canEdit;
+  final VoidCallback onSaved;
+
+  @override
+  ConsumerState<_SaturdayOffCard> createState() => _SaturdayOffCardState();
+}
+
+class _SaturdayOffCardState extends ConsumerState<_SaturdayOffCard> {
+  static const _names = ['1st', '2nd', '3rd', '4th', '5th'];
+  late int _mask = widget.mask;
+
+  @override
+  void didUpdateWidget(_SaturdayOffCard old) {
+    super.didUpdateWidget(old);
+    if (old.mask != widget.mask) _mask = widget.mask;
+  }
+
+  bool _on(int i) => _mask & (1 << i) != 0;
+
+  String get _summary {
+    if (_mask == 0) return 'Only Sunday is off. Every Saturday is a working day.';
+    if (_mask == 31) return 'Sunday and every Saturday are off.';
+    final picked = [for (var i = 0; i < 5; i++) if (_on(i)) _names[i]];
+    return 'Sunday and the ${picked.join(', ')} Saturday of each month are off.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return SectionCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const AppIcon(Icons.weekend_rounded, size: 36),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: Text('Weekly off', style: theme.textTheme.titleMedium)),
+        ]),
+        const SizedBox(height: AppSpacing.sm),
+        Text(_summary, style: theme.textTheme.bodyMedium),
+        if (widget.canEdit) ...[
+          const SizedBox(height: AppSpacing.md),
+          Text('Saturdays off', style: theme.textTheme.labelLarge),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            title: const Text('Every Saturday'),
+            value: _mask == 31 ? true : (_mask == 0 ? false : null),
+            tristate: true,
+            onChanged: (_) => setState(() => _mask = _mask == 31 ? 0 : 31),
+          ),
+          Wrap(spacing: AppSpacing.sm, runSpacing: AppSpacing.sm, children: [
+            for (var i = 0; i < 5; i++)
+              FilterChip(
+                label: Text(_names[i]),
+                selected: _on(i),
+                onSelected: (v) => setState(() => _mask = v ? _mask | (1 << i) : _mask & ~(1 << i)),
+              ),
+          ]),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _mask == widget.mask
+                  ? null
+                  : () => _run(context, () async {
+                        await ref.read(apiProvider).rpc('set_saturday_off_weeks', {
+                          'p_weeks': [for (var i = 0; i < 5; i++) if (_on(i)) i + 1],
+                        });
+                        widget.onSaved();
+                      }, done: 'Weekly off saved. Upcoming days are updated.'),
+              child: const Text('Save weekly off'),
+            ),
+          ),
+        ],
+      ]),
     );
   }
 }

@@ -535,25 +535,13 @@ class _FloatingPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
+    return Material(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x14263342),
-            blurRadius: 18,
-            offset: Offset(0, 7),
-            spreadRadius: -4,
-          ),
-        ],
+        side: const BorderSide(color: AppColors.border),
       ),
-      child: Material(
-        color: AppColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
-          side: const BorderSide(color: AppColors.border),
-        ),
-        clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Padding(
@@ -561,7 +549,6 @@ class _FloatingPanel extends StatelessWidget {
             child: child,
           ),
         ),
-      ),
     );
   }
 }

@@ -84,7 +84,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     autofillHints: const [AutofillHints.username],
                     inputFormatters: [LengthLimitingTextInputFormatter(32)],
                     decoration: const InputDecoration(labelText: 'Employee ID', hintText: 'e.g. EMP001',
-                        prefixIcon: AppIcon(Icons.badge_outlined)),
+                        prefixIcon: Padding(padding: EdgeInsets.all(14), child: AppIcon(Icons.badge_outlined, size: 20))),
                     validator: (v) {
                       final code = (v ?? '').trim().toUpperCase();
                       if (code.isEmpty) return 'Enter your employee ID';
@@ -104,7 +104,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onFieldSubmitted: (_) => _busy ? null : _submit(),
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      prefixIcon: const AppIcon(Icons.lock_outline_rounded),
+                      prefixIcon: const Padding(padding: EdgeInsets.all(14), child: AppIcon(Icons.lock_outline_rounded, size: 20)),
                       suffixIcon: IconButton(
                         tooltip: _obscure ? 'Show password' : 'Hide password',
                         icon: AppIcon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),

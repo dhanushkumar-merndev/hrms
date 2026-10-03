@@ -42,7 +42,7 @@ class WorkspaceScreen extends ConsumerWidget {
           child: AsyncView(
             value: data,
             onRetry: () => ref.invalidate(workspaceProvider),
-            loading: const SkeletonList(items: 4, height: 110),
+            loading: const WorkspaceSkeleton(),
             builder: (d) {
               final team = (d['team_today'] as Map?)?.cast<String, dynamic>();
               final week = ((d['week'] as Map?) ?? const {}).cast<String, dynamic>();

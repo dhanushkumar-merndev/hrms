@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/time/org_time.dart';
+import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
+import '../../core/widgets/jelly_nav_bar.dart';
 import '../../core/widgets/states.dart';
 import '../home/home_providers.dart';
 import '../leave/leave_screen.dart';
@@ -26,8 +28,6 @@ class ActionScreen extends ConsumerStatefulWidget {
 
 class _ActionScreenState extends ConsumerState<ActionScreen> {
   _ActionScope _selectedScope = _ActionScope.user;
-  int _selectedUserCategory = 0;
-  int _selectedTeamCategory = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +130,14 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
     ];
 
     final teamAndHrActions = <_Item>[
+      if (s?.canDraftPolicy ?? false)
+        _Item(
+          Icons.beach_access_outlined,
+          'Leave & holidays',
+          teal,
+          '/admin/leave-policies',
+          'Leave types, balances and holidays',
+        ),
       if (s?.canReview ?? false)
         _Item(
           Icons.fact_check_outlined,
@@ -173,35 +181,93 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
     final adminActions = <_Item>[
       if (s?.isAdmin ?? false)
         _Item(
+          Icons.location_city_outlined,
+          'Departments',
+          teal,
+          '/admin/teams?section=departments',
+          'Create and manage departments',
+        ),
+      if (s?.isAdmin ?? false)
+        _Item(
+          Icons.groups_outlined,
+          'Teams',
+          teal,
+          '/admin/teams',
+          'Teams, members and managers',
+        ),
+      if (s?.isAdmin ?? false)
+        _Item(
+          Icons.policy_outlined,
+          'Company policies',
+          const (AppColors.documentsCard, AppColors.documentsAction),
+          '/policies',
+          'Publish and manage company policies',
+        ),
+      if (s?.isAdmin ?? false)
+        _Item(
           Icons.admin_panel_settings_outlined,
           'Administration',
           lav,
           '/admin/organization',
           'Organisation setup and controls',
         ),
+      if (s?.isAdmin ?? false)
+        _Item(
+          Icons.work_outline_rounded,
+          'Outside work',
+          peach,
+          '/admin/outside-work',
+          'Send people out: shoot, WFH, meeting',
+        ),
+      if (s?.isAdmin ?? false)
+        _Item(
+          Icons.wifi_rounded,
+          'Offices & Wi-Fi',
+          lav,
+          '/admin/offices',
+          'Office location and Wi-Fi for check-in',
+        ),
+      if (s?.isAdmin ?? false)
+        _Item(
+          Icons.weekend_outlined,
+          'Weekly off',
+          teal,
+          '/admin/leave-policies?tab=holidays',
+          'Sundays and which Saturdays are off',
+        ),
+      if (s?.isAdmin ?? false)
+        _Item(
+          Icons.admin_panel_settings_outlined,
+          'Roles & permissions',
+          lav,
+          '/admin/permissions',
+          'Who is Manager, HR or Admin',
+        ),
     ];
 
-    final userCategories = <_ActionCategory>[
-      _ActionCategory('Attendance', Icons.schedule_rounded, attendanceActions),
-      _ActionCategory('Leave', Icons.beach_access_rounded, leaveActions),
-      _ActionCategory('Salary', Icons.payments_outlined, salaryActions),
-      _ActionCategory('Requests', Icons.assignment_outlined, requestActions),
+    final userActions = <_Item>[
+      ...attendanceActions,
+      ...leaveActions,
+      ...salaryActions,
+      ...requestActions,
     ];
-    final selectedActions = userCategories[_selectedUserCategory].items;
-    final scopes = <(_ActionScope, String, IconData)>[
-      (_ActionScope.user, 'User', Icons.person_outline_rounded),
+    final scopes = <(_ActionScope, String, IconData, List<_Item>)>[
+      (_ActionScope.user, 'User', Icons.person_outline_rounded, userActions),
       if (teamAndHrActions.isNotEmpty)
-        (_ActionScope.teamHr, 'Team & HR', Icons.groups_outlined),
+        (_ActionScope.teamHr, 'HR', Icons.groups_outlined, teamAndHrActions),
       if (adminActions.isNotEmpty)
-        (_ActionScope.admin, 'Admin', Icons.admin_panel_settings_outlined),
+        (
+          _ActionScope.admin,
+          'Admin',
+          Icons.admin_panel_settings_outlined,
+          adminActions,
+        ),
     ];
     final activeScope = scopes.any((scope) => scope.$1 == _selectedScope)
         ? _selectedScope
         : _ActionScope.user;
     final scopeIndex = scopes.indexWhere((scope) => scope.$1 == activeScope);
-    final teamIndex = teamAndHrActions.isEmpty
-        ? 0
-        : _selectedTeamCategory.clamp(0, teamAndHrActions.length - 1);
+    final selectedActions = scopes[scopeIndex].$4;
 
     return Scaffold(
       body: SafeArea(
@@ -210,6 +276,26 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
           children: [
             const PageTitle('Actions'),
             const OfflineBanner(),
+            if (scopes.length > 1) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.page,
+                  AppSpacing.sm,
+                  AppSpacing.page,
+                  AppSpacing.sm,
+                ),
+                child: _CompactCategoryBar(
+                  options: [for (final scope in scopes) (scope.$2, scope.$3)],
+                  selectedIndex: scopeIndex,
+                  onSelected: (index) =>
+                      setState(() => _selectedScope = scopes[index].$1),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.page),
+                child: Divider(),
+              ),
+            ],
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -220,51 +306,12 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.page,
-                    AppSpacing.sm,
+                    AppSpacing.md,
                     AppSpacing.page,
                     AppSpacing.xl,
                   ),
                   children: [
-                    if (scopes.length > 1) ...[
-                      const SizedBox(height: AppSpacing.lg),
-                      _CompactCategoryBar(
-                        options: [
-                          for (final scope in scopes) (scope.$2, scope.$3),
-                        ],
-                        selectedIndex: scopeIndex,
-                        onSelected: (index) => setState(() {
-                          _selectedScope = scopes[index].$1;
-                        }),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.md),
-                    if (activeScope == _ActionScope.user) ...[
-                      _CompactCategoryBar(
-                        options: [
-                          for (final category in userCategories)
-                            (category.label, category.icon),
-                        ],
-                        selectedIndex: _selectedUserCategory,
-                        onSelected: (index) =>
-                            setState(() => _selectedUserCategory = index),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      for (final it in selectedActions) _ActionTile(item: it),
-                    ] else if (activeScope == _ActionScope.teamHr) ...[
-                      _CompactCategoryBar(
-                        options: [
-                          for (final action in teamAndHrActions)
-                            (_shortActionLabel(action.label), action.icon),
-                        ],
-                        selectedIndex: teamIndex,
-                        onSelected: (index) =>
-                            setState(() => _selectedTeamCategory = index),
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      _ActionTile(item: teamAndHrActions[teamIndex]),
-                    ] else ...[
-                      for (final it in adminActions) _ActionTile(item: it),
-                    ],
+                    for (final it in selectedActions) _ActionTile(item: it),
                   ],
                 ),
               ),
@@ -274,13 +321,6 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
       ),
     );
   }
-
-  static String _shortActionLabel(String label) => switch (label) {
-    'Review requests' => 'Reviews',
-    'Team hours' => 'Team',
-    'Payroll uploads' => 'Payroll',
-    _ => label,
-  };
 
   /// Sum of available half-day units across paid types, or null when unknown.
   static int? _paidDaysLeft(Map<String, dynamic>? balances) {
@@ -343,21 +383,30 @@ class _CompactCategoryBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (options.length == 1) {
+      return _SingleCategoryTab(
+        option: options.first,
+        onTap: () => onSelected(0),
+      );
+    }
     return Container(
-      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0F2F6),
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
       ),
-      child: Row(
-        children: [
-          for (var index = 0; index < options.length; index++)
-            Expanded(
-              child: _CompactCategoryButton(
-                option: options[index],
-                selected: selectedIndex == index,
-                onTap: () => onSelected(index),
-              ),
+      clipBehavior: Clip.antiAlias,
+      child: JellyNavigationBar(
+        height: 72,
+        showTopBorder: false,
+        selectedIndex: selectedIndex,
+        onDestinationSelected: onSelected,
+        destinations: [
+          for (final option in options)
+            JellyNavDestination(
+              icon: AppIcon(option.$2, size: 22),
+              selectedIcon: AppIcon(option.$2, size: 22),
+              label: option.$1,
             ),
         ],
       ),
@@ -365,69 +414,59 @@ class _CompactCategoryBar extends StatelessWidget {
   }
 }
 
-class _CompactCategoryButton extends StatelessWidget {
-  const _CompactCategoryButton({
-    required this.option,
-    required this.selected,
-    required this.onTap,
-  });
+class _SingleCategoryTab extends StatelessWidget {
+  const _SingleCategoryTab({required this.option, required this.onTap});
 
   final (String, IconData) option;
-  final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      selected: selected,
-      child: Material(
-        color: selected ? Colors.white : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        elevation: selected ? 1 : 0,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 2),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  option.$2,
-                  size: 20,
-                  color: selected ? AppColors.primary : AppColors.textSecondary,
+      selected: true,
+      label: option.$1,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 72,
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 64,
+                height: 32,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.attendanceCard,
+                  borderRadius: BorderRadius.circular(999),
                 ),
-                const SizedBox(height: 3),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    option.$1,
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      color: selected
-                          ? AppColors.primary
-                          : AppColors.textSecondary,
-                    ),
-                  ),
+                child: AppIcon(option.$2, size: 22),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                option.$1,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                  height: 1.2,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-}
-
-class _ActionCategory {
-  const _ActionCategory(this.label, this.icon, this.items);
-
-  final String label;
-  final IconData icon;
-  final List<_Item> items;
 }
 
 class _Item {

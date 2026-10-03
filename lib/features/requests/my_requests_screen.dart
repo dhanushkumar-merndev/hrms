@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
+import '../../core/auth/session_controller.dart';
 import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
@@ -137,6 +138,7 @@ class _MyRequestsScreenState extends ConsumerState<MyRequestsScreen> {
                     ? 'Approved, not approved and cancelled requests appear here.'
                     : null,
               ),
+              loading: const RequestsSkeleton(),
               itemBuilder: (context, r) => RequestTile(
                 r: r,
                 onTap: () => context.push('/requests/${r['id']}').then((_) {
@@ -174,8 +176,9 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       showMessage(context, e.message, error: true);
-      if (e.code == 'STALE_VERSION' || e.code == 'REQUEST_LOCKED')
+      if (e.code == 'STALE_VERSION' || e.code == 'REQUEST_LOCKED') {
         ref.invalidate(myRequestProvider(widget.id));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -185,11 +188,13 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
   Widget build(BuildContext context) {
     final data = ref.watch(myRequestProvider(widget.id));
     final api = ref.read(apiProvider);
+    final isAdmin = ref.watch(sessionContextProvider)?.isAdmin ?? false;
     return Scaffold(
-      appBar: AppBar(title: const Text('Request')),
+      appBar: AppBar(title: const Text('Request details')),
       body: AsyncView(
         value: data,
         onRetry: () => ref.invalidate(myRequestProvider(widget.id)),
+        loading: const RequestDetailSkeleton(),
         builder: (res) {
           final r = res.map;
           final version = res.version;
@@ -213,35 +218,70 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
             _ => '/corrections/new?edit=${widget.id}',
           };
 
-          return ListView(
-            padding: const EdgeInsets.all(AppSpacing.page),
+          Future<void> withdraw() async {
+            final reason = await askReason(
+              context,
+              title: state == 'under_review'
+                  ? 'Ask to withdraw?'
+                  : 'Withdraw request?',
+              message: state == 'under_review'
+                  ? 'Your approver has opened this request, so they must accept the withdrawal.'
+                  : null,
+              optional: true,
+              confirmLabel: 'Withdraw',
+            );
+            if (reason == null) return;
+            await _run(
+              () => api.rpc('withdraw_request', {
+                'p_request_id': widget.id,
+                'p_expected_version': version,
+                'p_reason': reason,
+              }),
+            );
+          }
+
+          Future<void> cancelLeave() async {
+            final reason = await askReason(
+              context,
+              title: isAdmin ? 'Revoke this leave?' : 'Cancel approved leave?',
+              message: isAdmin
+                  ? 'The leave is cancelled now and the days go back to your balance.'
+                  : 'Your approver must approve the cancellation. The leave stays booked until then.',
+              confirmLabel: isAdmin ? 'Revoke leave' : 'Request cancellation',
+            );
+            if (reason == null) return;
+            await _run(
+              () => api.rpc('request_leave_cancellation', {
+                'p_request_id': widget.id,
+                'p_expected_version': version,
+                'p_reason': reason,
+              }),
+            );
+          }
+
+          return Column(
             children: [
-              SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.page,
+                    AppSpacing.md,
+                    AppSpacing.page,
+                    AppSpacing.xl,
+                  ),
                   children: [
-                    Text(
-                      requestTitle(r),
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: [
-                        StatusChip(label, tone: tone),
-                        if (r['edited'] == true)
-                          StatusChip(
-                            'Edited · version ${r['current_revision']}',
-                            tone: ChipTone.neutral,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    _LockNote(
-                      state: state,
-                      reviewer: (r['reviewer'] as Map?)?['name'] as String?,
-                      assigned: r['reviewer_assigned'] == true,
+                    _RequestHero(
+                      title: requestTitle(r),
+                      kind: kind,
+                      status: label,
+                      tone: tone,
+                      edited: r['edited'] == true,
+                      revision: r['current_revision'],
+                      lockNote: _LockNote(
+                        state: state,
+                        reviewer: (r['reviewer'] as Map?)?['name'] as String?,
+                        assigned: r['reviewer_assigned'] == true,
+                      ),
                     ),
                     if (state == 'returned' && returnReason != null) ...[
                       const SizedBox(height: AppSpacing.md),
@@ -250,116 +290,285 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                         padding: const EdgeInsets.all(AppSpacing.md),
                         decoration: BoxDecoration(
                           color: AppColors.warningSoft,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: AppColors.warning.withValues(alpha: 0.22),
+                          ),
                         ),
                         child: Text(
-                          'Approver\'s note: “$returnReason”\n'
-                          '${kind == 'leave' ? 'The balance held for this request was released. Resubmitting checks availability again.' : ''}',
+                          'Approver’s note: “$returnReason”\n'
+                          '${kind == 'leave' ? 'The held leave balance was released. Availability is checked again when you resubmit.' : ''}',
                           style: const TextStyle(color: AppColors.warning),
                         ),
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.lg),
+                    SectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _RequestSectionTitle(
+                            icon: Icons.description_outlined,
+                            label: 'Details',
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          const Divider(),
+                          const SizedBox(height: AppSpacing.sm),
+                          RevisionView(
+                            kind: kind,
+                            payload: latest,
+                            onViewAttachment:
+                                latest['attachment_file_version_id'] == null
+                                ? null
+                                : () => openProtectedFile(
+                                    context,
+                                    latest['attachment_file_version_id']
+                                        as String,
+                                    'Attachment',
+                                  ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    SectionCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _RequestSectionTitle(
+                            icon: Icons.history_rounded,
+                            label: 'Activity',
+                          ),
+                          const SizedBox(height: AppSpacing.sm),
+                          const Divider(),
+                          const SizedBox(height: AppSpacing.xs),
+                          EventTimeline(events: events),
+                        ],
+                      ),
+                    ),
+                    if (state == 'approved' && kind == 'correction') ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'To change an approved correction, submit a new correction for that day.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    if (state == 'approved' && kind == 'bank_details') ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        'These bank details are locked. Start a new change request from My salary if your account changes.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-              SectionCard(
-                child: RevisionView(
-                  kind: kind,
-                  payload: latest,
-                  onViewAttachment: latest['attachment_file_version_id'] == null
-                      ? null
-                      : () => openProtectedFile(
-                          context,
-                          latest['attachment_file_version_id'] as String,
-                          'Attachment',
-                        ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              SectionCard(child: EventTimeline(events: events)),
-              const SizedBox(height: AppSpacing.xl),
-              if (editable)
-                FilledButton.icon(
-                  onPressed: _busy
-                      ? null
-                      : () => context
+              if (editable || state == 'under_review')
+                _RequestBottomActions(
+                  busy: _busy,
+                  editLabel: state == 'returned' ? 'Edit & resubmit' : 'Edit',
+                  onEdit: editable
+                      ? () => context
                             .push(editPath)
                             .then(
                               (_) =>
                                   ref.invalidate(myRequestProvider(widget.id)),
-                            ),
-                  icon: const AppIcon(Icons.edit_outlined),
-                  label: Text(state == 'returned' ? 'Edit & resubmit' : 'Edit'),
-                ),
-              if (editable || state == 'under_review') ...[
-                const SizedBox(height: AppSpacing.sm),
-                OutlinedButton(
-                  onPressed: _busy
-                      ? null
-                      : () async {
-                          final reason = await askReason(
-                            context,
-                            title: state == 'under_review'
-                                ? 'Ask to withdraw?'
-                                : 'Withdraw request?',
-                            message: state == 'under_review'
-                                ? 'Your approver has opened this request, so they must accept the withdrawal.'
-                                : null,
-                            optional: true,
-                            confirmLabel: 'Withdraw',
-                          );
-                          if (reason == null) return;
-                          await _run(
-                            () => api.rpc('withdraw_request', {
-                              'p_request_id': widget.id,
-                              'p_expected_version': version,
-                              'p_reason': reason,
-                            }),
-                          );
-                        },
-                  child: Text(
-                    state == 'under_review' ? 'Request withdrawal' : 'Withdraw',
-                  ),
-                ),
-              ],
-              if (state == 'approved' && kind == 'leave')
-                OutlinedButton(
-                  onPressed: _busy
-                      ? null
-                      : () async {
-                          final reason = await askReason(
-                            context,
-                            title: 'Cancel approved leave?',
-                            message: 'Your approver must approve the cancellation. The leave stays booked until then.',
-                            confirmLabel: 'Request cancellation',
-                          );
-                          if (reason == null) return;
-                          await _run(
-                            () => api.rpc('request_leave_cancellation', {
-                              'p_request_id': widget.id,
-                              'p_expected_version': version,
-                              'p_reason': reason,
-                            }),
-                          );
-                        },
-                  child: const Text('Request cancellation'),
-                ),
-              if (state == 'approved' && kind == 'correction')
-                Text(
-                  'To change an approved correction, submit a new correction for that day.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
-                ),
-              if (state == 'approved' && kind == 'bank_details')
-                Text(
-                  'These bank details are locked. Start a new change request from My salary if your account changes.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  textAlign: TextAlign.center,
+                            )
+                      : null,
+                  withdrawLabel: state == 'under_review'
+                      ? 'Request withdrawal'
+                      : 'Withdraw',
+                  onWithdraw: withdraw,
+                )
+              else if (state == 'approved' && kind == 'leave')
+                _RequestBottomActions(
+                  busy: _busy,
+                  withdrawLabel: isAdmin
+                      ? 'Revoke leave'
+                      : 'Request cancellation',
+                  onWithdraw: cancelLeave,
                 ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _RequestHero extends StatelessWidget {
+  const _RequestHero({
+    required this.title,
+    required this.kind,
+    required this.status,
+    required this.tone,
+    required this.edited,
+    required this.revision,
+    required this.lockNote,
+  });
+
+  final String title;
+  final String kind;
+  final String status;
+  final ChipTone tone;
+  final bool edited;
+  final Object? revision;
+  final Widget lockNote;
+
+  @override
+  Widget build(BuildContext context) {
+    final (background, accent, icon) = switch (kind) {
+      'leave' => (
+        AppColors.leaveCard,
+        AppColors.leaveAction,
+        Icons.beach_access_outlined,
+      ),
+      'bank_details' => (
+        AppColors.salaryCard,
+        AppColors.salaryAction,
+        Icons.account_balance_outlined,
+      ),
+      _ => (
+        AppColors.attendanceCard,
+        AppColors.attendanceAction,
+        Icons.edit_calendar_outlined,
+      ),
+    };
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.78),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: AppIcon(icon, color: accent, size: 26),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: AppSpacing.sm),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        StatusChip(status, tone: tone),
+                        if (edited)
+                          StatusChip(
+                            'Edited · v$revision',
+                            tone: ChipTone.neutral,
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          lockNote,
+        ],
+      ),
+    );
+  }
+}
+
+class _RequestSectionTitle extends StatelessWidget {
+  const _RequestSectionTitle({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: AppColors.attendanceCard,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: AppIcon(icon, size: 19, color: AppColors.primary),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(label, style: Theme.of(context).textTheme.titleMedium),
+      ],
+    );
+  }
+}
+
+class _RequestBottomActions extends StatelessWidget {
+  const _RequestBottomActions({
+    required this.busy,
+    required this.withdrawLabel,
+    required this.onWithdraw,
+    this.editLabel,
+    this.onEdit,
+  });
+
+  final bool busy;
+  final String withdrawLabel;
+  final Future<void> Function() onWithdraw;
+  final String? editLabel;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            AppSpacing.md,
+            AppSpacing.page,
+            AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: busy ? null : onWithdraw,
+                  child: Text(withdrawLabel),
+                ),
+              ),
+              if (onEdit != null) ...[
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: busy ? null : onEdit,
+                    icon: const AppIcon(Icons.edit_outlined, size: 19),
+                    label: Text(editLabel ?? 'Edit'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -392,20 +601,35 @@ class _LockNote extends StatelessWidget {
       'cancelled' => 'Cancelled.',
       _ => '',
     };
-    return Row(
-      children: [
-        AppIcon(
-          state == 'submitted' || state == 'returned'
-              ? Icons.lock_open_rounded
-              : Icons.lock_outline_rounded,
-          size: 18,
-          color: AppColors.textSecondary,
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Expanded(
-          child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
-        ),
-      ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: AppIcon(
+              state == 'submitted' || state == 'returned'
+                  ? Icons.lock_open_rounded
+                  : Icons.lock_outline_rounded,
+              size: 18,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+          ),
+        ],
+      ),
     );
   }
 }

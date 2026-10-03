@@ -16,7 +16,8 @@ import '../requests/request_widgets.dart';
 /// S22 — reviewer queue. Listing NEVER locks a request: the rows are a
 /// minimal server projection without reasons, revisions or attachments.
 class ApprovalsScreen extends ConsumerStatefulWidget {
-  const ApprovalsScreen({super.key});
+  const ApprovalsScreen({super.key, this.initialScope});
+  final String? initialScope;
 
   @override
   ConsumerState<ApprovalsScreen> createState() => _ApprovalsScreenState();
@@ -42,7 +43,7 @@ const _states = <(Object?, String)>[
 class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
   String? _kind;
   String? _state;
-  String _scope = 'mine';
+  late String _scope = const ['mine', 'unassigned', 'all'].contains(widget.initialScope) ? widget.initialScope! : 'mine';
   int _generation = 0;
 
   Future<void> _openFilters(bool isAdmin) async {
@@ -144,10 +145,11 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                       ? 'Every pending request has an approver.'
                       : null,
                 ),
+                loading: const RequestsSkeleton(),
                 itemBuilder: (context, r) => RequestTile(
                   r: r,
                   showEmployee: true,
-                  onTap: () => context.push('/approvals/${r['id']}').then((_) {
+                  onTap: () => context.push('/approvals/${r['id']}', extra: r).then((_) {
                     ref.invalidate(homeSummaryProvider);
                     if (mounted) setState(() => _generation++);
                   }),

@@ -343,34 +343,120 @@ void main() {
     );
 
     expect(find.text('User'), findsOneWidget);
-    expect(find.text('Team & HR'), findsOneWidget);
+    expect(find.text('HR'), findsOneWidget);
     expect(find.text('Admin'), findsOneWidget);
-    expect(find.text('Attendance'), findsOneWidget);
+    expect(find.byType(Divider), findsWidgets);
     expect(find.text('My attendance'), findsOneWidget);
-    expect(find.text('Apply for leave'), findsNothing);
-    await tester.tap(find.text('Leave'));
-    await tester.pump();
-    expect(find.text('Apply for leave'), findsOneWidget);
-    await tester.tap(find.text('Salary'));
-    await tester.pump();
-    expect(find.text('My salary'), findsOneWidget);
-    await tester.tap(find.text('Requests'));
-    await tester.pump();
+    await tester.scrollUntilVisible(find.text('My requests'), 400);
     expect(find.text('My requests'), findsOneWidget);
-    expect(find.text('Requests'), findsOneWidget);
-    await tester.tap(find.text('Team & HR'));
-    await tester.pump();
-    expect(find.text('Reviews'), findsOneWidget);
+    await tester.tap(find.text('HR'));
+    await tester.pumpAndSettle();
     expect(find.text('Review requests'), findsOneWidget);
-    await tester.tap(find.text('Team'));
-    await tester.pump();
-    expect(find.text('Team hours'), findsOneWidget);
-    await tester.tap(find.text('Payroll'));
-    await tester.pump();
-    expect(find.text('Payroll uploads'), findsOneWidget);
+    expect(find.text('My attendance'), findsNothing);
+    await tester.scrollUntilVisible(find.text('Employees'), 300);
+    expect(find.text('Employees'), findsOneWidget);
     await tester.tap(find.text('Admin'));
-    await tester.pump();
+    await tester.pumpAndSettle();
+    expect(find.text('Departments'), findsOneWidget);
+    expect(find.text('Teams'), findsOneWidget);
+    expect(find.text('Company policies'), findsOneWidget);
     expect(find.text('Administration'), findsOneWidget);
+    expect(find.text('Review requests'), findsNothing);
+    // Frequent admin settings are one tap away in Action too.
+    for (final label in ['Outside work', 'Offices & Wi-Fi', 'Weekly off', 'Roles & permissions']) {
+      await tester.scrollUntilVisible(find.text(label), 200, scrollable: find.byType(Scrollable).last);
+      expect(find.text(label), findsOneWidget);
+    }
+    await unmount(tester);
+  });
+
+  testWidgets('role tabs are hidden for members and limited for HR', (
+    tester,
+  ) async {
+    Object? actionData(String fn) => switch (fn) {
+      'get_home_summary' => {'pending_reviews': 0},
+      'get_leave_balances' => {'balances': []},
+      'list_my_requests' => const [],
+      _ => null,
+    };
+
+    await pumpScreen(
+      tester,
+      const ActionScreen(),
+      session: testSession(),
+      handler: (fn, _) => actionData(fn),
+    );
+    expect(find.text('User'), findsNothing);
+    expect(find.text('HR'), findsNothing);
+    expect(find.text('Admin'), findsNothing);
+    expect(find.text('My attendance'), findsOneWidget);
+    await unmount(tester);
+
+    await pumpScreen(
+      tester,
+      const ActionScreen(),
+      session: testSession(roles: ['hr'], permissions: hrPermissions),
+      handler: (fn, _) => actionData(fn),
+    );
+    expect(find.text('User'), findsOneWidget);
+    expect(find.text('HR'), findsOneWidget);
+    expect(find.text('Admin'), findsNothing);
+    await unmount(tester);
+  });
+
+  testWidgets('request detail keeps status clear and actions fixed', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(360, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await pumpScreen(
+      tester,
+      const RequestDetailScreen(id: 'request-1'),
+      session: testSession(),
+      handler: (fn, _) => fn == 'get_my_request'
+          ? {
+              'state': 'submitted',
+              'kind': 'leave',
+              'leave_type': {'name': 'Casual Leave'},
+              'edited': false,
+              'current_revision': 1,
+              'reviewer_assigned': false,
+              'reviewer': null,
+              'revisions': [
+                {
+                  'payload': {
+                    'leave_type_name': 'Casual Leave',
+                    'start_date': '2026-10-03',
+                    'end_date': '2026-10-03',
+                    'units': 2,
+                    'reason': null,
+                    'days': [
+                      {'day': '2026-10-03', 'slot': 'FULL'},
+                    ],
+                  },
+                },
+              ],
+              'events': [
+                {
+                  'action': 'submitted',
+                  'revision_no': 1,
+                  'actor': {'name': 'Asha Rao'},
+                  'created_at': '2026-10-02T00:18:00Z',
+                },
+              ],
+            }
+          : null,
+    );
+
+    expect(find.text('Request details'), findsOneWidget);
+    expect(find.text('Casual Leave'), findsWidgets);
+    expect(find.text('Submitted'), findsWidgets);
+    expect(find.text('Details'), findsOneWidget);
+    expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Withdraw'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Activity'), 250);
+    expect(find.text('Activity'), findsOneWidget);
+    expect(tester.takeException(), isNull);
     await unmount(tester);
   });
 

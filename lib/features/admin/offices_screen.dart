@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 
 import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
@@ -71,6 +72,9 @@ class OfficesScreen extends ConsumerWidget {
                         'piloting' => 'Pilot in progress',
                         _ => 'Not tested on site yet',
                       }),
+                      KeyValueRow('Office Wi-Fi', ((o['wifi_ssids'] as List?) ?? const []).isEmpty
+                          ? 'Not required (location only)'
+                          : ((o['wifi_ssids'] as List).join(' · '))),
                       KeyValueRow('Assigned', '${o['assigned_count']} people · config v${o['config_version']}'),
                     ]),
                   ),
@@ -109,6 +113,24 @@ class _OfficeEditorState extends ConsumerState<OfficeEditor> {
   late final _accuracy = TextEditingController(text: '${o['max_accuracy_m'] ?? 15}');
   late final _age = TextEditingController(text: '${o['max_sample_age_s'] ?? 10}');
   late final _notes = TextEditingController(text: o['calibration_notes'] as String?);
+  late final _wifi = TextEditingController(text: ((o['wifi_ssids'] as List?) ?? const []).join('\n'));
+
+  List<String> get _wifiNames =>
+      _wifi.text.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toSet().toList();
+
+  Future<void> _useCurrentWifi() async {
+    String? name;
+    try {
+      name = (await NetworkInfo().getWifiName())?.replaceAll('"', '').trim();
+    } catch (_) {}
+    if (!mounted) return;
+    if (name == null || name.isEmpty || name == '<unknown ssid>') {
+      showMessage(context, 'Connect this phone to the office Wi-Fi and allow location, then try again.', error: true);
+      return;
+    }
+    if (_wifiNames.contains(name)) return;
+    setState(() => _wifi.text = [..._wifiNames, name!].join('\n'));
+  }
   late bool _strict = o['strict_mode'] == true;
   late bool _active = o['active'] as bool? ?? true;
   late String _calibration = (o['calibration_status'] as String?) ?? 'untested';
@@ -119,7 +141,7 @@ class _OfficeEditorState extends ConsumerState<OfficeEditor> {
 
   @override
   void dispose() {
-    for (final c in [_name, _tz, _lat, _lng, _radius, _accuracy, _age, _notes]) {
+    for (final c in [_name, _tz, _lat, _lng, _radius, _accuracy, _age, _notes, _wifi]) {
       c.dispose();
     }
     super.dispose();
@@ -153,7 +175,7 @@ class _OfficeEditorState extends ConsumerState<OfficeEditor> {
       _errors = const {};
     });
     try {
-      await ref.read(apiProvider).rpc('save_office', {
+      final saved = await ref.read(apiProvider).rpc('save_office', {
         'p_id': o['id'],
         'p_name': _name.text.trim(),
         'p_timezone': _tz.text.trim().isEmpty ? null : _tz.text.trim(),
@@ -168,6 +190,11 @@ class _OfficeEditorState extends ConsumerState<OfficeEditor> {
         'p_calibration_notes': _notes.text.trim().isEmpty ? null : _notes.text.trim(),
         'p_expected_version': o['version'],
       });
+      final before = ((o['wifi_ssids'] as List?) ?? const []).cast<String>().toSet();
+      final id = (saved.map['id'] as String?) ?? o['id'] as String?;
+      if (id != null && (before.length != _wifiNames.length || !before.containsAll(_wifiNames))) {
+        await ref.read(apiProvider).rpc('set_office_wifi', {'p_office_id': id, 'p_ssids': _wifiNames});
+      }
       if (mounted) Navigator.pop(context, true);
     } on ApiException catch (e) {
       setState(() {
@@ -193,6 +220,7 @@ class _OfficeEditorState extends ConsumerState<OfficeEditor> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             TextField(controller: _name, maxLength: 120,
                 decoration: InputDecoration(labelText: 'Office name', errorText: _errors['name'])),
+            const SizedBox(height: AppSpacing.md),
             TextField(controller: _tz, decoration: InputDecoration(labelText: 'Time zone', errorText: _errors['timezone'],
                 helperText: 'IANA name, e.g. Asia/Kolkata')),
           ]),
@@ -243,6 +271,36 @@ class _OfficeEditorState extends ConsumerState<OfficeEditor> {
         ),
         const SizedBox(height: AppSpacing.lg),
         SectionCard(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('Office Wi-Fi', style: Theme.of(context).textTheme.titleSmall),
+            const SizedBox(height: AppSpacing.xs),
+            Text('Check-in and check-out work only at the office location AND while connected to one of these '
+                'Wi-Fi networks. Leave empty to check location only.',
+                style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              controller: _wifi,
+              minLines: 2,
+              maxLines: 6,
+              decoration: InputDecoration(
+                labelText: 'Wi-Fi names (one per line)',
+                hintText: 'Airtel abhi 3999',
+                errorText: _errors['wifi_ssids'],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _useCurrentWifi,
+                icon: const Icon(Icons.wifi_rounded, size: 20),
+                label: const Text('Add the Wi-Fi this phone is on'),
+              ),
+            ),
+          ]),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        SectionCard(
           color: AppColors.warningSoft,
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text('On-site calibration', style: Theme.of(context).textTheme.titleSmall),
@@ -263,6 +321,7 @@ class _OfficeEditorState extends ConsumerState<OfficeEditor> {
               ],
               onChanged: (v) => setState(() => _calibration = v ?? 'untested'),
             ),
+            const SizedBox(height: AppSpacing.md),
             TextField(controller: _notes, maxLength: 1000, minLines: 2, maxLines: 4,
                 decoration: const InputDecoration(labelText: 'Test notes')),
           ]),

@@ -85,6 +85,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             child: AsyncView(
               value: data,
               onRetry: () => ref.invalidate(myAttendanceProvider(_range)),
+              loading: const AttendanceSkeleton(),
               builder: (d) {
                 final all = ((d['rows'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList();
                 final rows = all.where((r) => _filter == null || r['status'] == _filter).toList();
@@ -116,43 +117,16 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                       // away so the days that matter are on top.
                       for (final r in past) ...[_DayRow(r), const SizedBox(height: AppSpacing.sm)],
                       if (upcoming.isNotEmpty && past.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                          child: Material(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(12),
-                            child: InkWell(
-                              onTap: () => setState(() => _showUpcoming = !_showUpcoming),
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppColors.border),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    AppIcon(
-                                      _showUpcoming ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                                      size: 18,
-                                      color: AppColors.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _showUpcoming
-                                          ? 'Hide upcoming days'
-                                          : 'Show ${upcoming.length} upcoming ${upcoming.length == 1 ? 'day' : 'days'}',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: () => setState(() => _showUpcoming = !_showUpcoming),
+                            icon: Icon(
+                              _showUpcoming ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                              size: 20,
                             ),
+                            label: Text(_showUpcoming
+                                ? 'Hide upcoming days'
+                                : 'Show ${upcoming.length} upcoming ${upcoming.length == 1 ? 'day' : 'days'}'),
                           ),
                         ),
                       if (_showUpcoming || past.isEmpty)
@@ -169,6 +143,15 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
   }
 }
 
+/// Soft background + strong foreground for a status tone.
+(Color, Color) _toneColors(ChipTone tone) => switch (tone) {
+      ChipTone.success => (AppColors.successSoft, AppColors.success),
+      ChipTone.warning => (AppColors.warningSoft, AppColors.warning),
+      ChipTone.error => (AppColors.errorSoft, AppColors.error),
+      ChipTone.info => (AppColors.attendanceCard, AppColors.primary),
+      ChipTone.neutral => (const Color(0xFFEFF1F4), AppColors.textSecondary),
+    };
+
 class _MonthBar extends StatelessWidget {
   const _MonthBar({required this.month, required this.onChange, required this.canNext});
   final DateTime month;
@@ -179,53 +162,27 @@ class _MonthBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = OrgTime.today();
     final isCurrentMonth = month.year == now.year && month.month == now.month;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.md, AppSpacing.page, AppSpacing.sm),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.sm, AppSpacing.page, AppSpacing.sm),
       child: Row(children: [
-        IconButton(
+        IconButton.filledTonal(
           tooltip: 'Previous month',
           onPressed: () => onChange(DateTime(month.year, month.month - 1)),
-          icon: const AppIcon(Icons.chevron_left_rounded, size: 22),
+          icon: const Icon(Icons.chevron_left_rounded),
         ),
         Expanded(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const AppIcon(Icons.calendar_today_rounded, size: 16, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(
-                DateFormat('MMMM yyyy').format(month),
+          child: Column(children: [
+            Text(DateFormat('MMMM yyyy').format(month),
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.text),
-              ),
-              if (isCurrentMonth) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.attendanceCard,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Text(
-                    'Current',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.primary),
-                  ),
-                ),
-              ],
-            ],
-          ),
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.text)),
+            if (isCurrentMonth)
+              const Text('This month', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          ]),
         ),
-        IconButton(
+        IconButton.filledTonal(
           tooltip: 'Next month',
           onPressed: canNext ? () => onChange(DateTime(month.year, month.month + 1)) : null,
-          icon: const AppIcon(Icons.chevron_right_rounded, size: 22),
+          icon: const Icon(Icons.chevron_right_rounded),
         ),
       ]),
     );
@@ -238,205 +195,147 @@ class _Totals extends StatelessWidget {
   final int inProgress;
   final int needsCorrection;
 
+  int _n(String key) => (totals[key] as num? ?? 0).toInt();
+
   @override
   Widget build(BuildContext context) {
-    final short = (totals['shortfall_seconds'] as num? ?? 0) > 0;
-    final extra = (totals['extra_seconds'] as num? ?? 0) > 0;
-
-    Widget metricTile({
-      required String label,
-      required String value,
-      required IconData icon,
-      required Color bgColor,
-      required Color borderColor,
-      required Color iconColor,
-      Color? valueColor,
-    }) {
-      return Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: borderColor),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
-                  ),
-                  AppIcon(icon, size: 16, color: iconColor),
-                ],
-              ),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: valueColor ?? AppColors.text,
-                  letterSpacing: -0.3,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final hasSubchips = (totals['late_days'] as num? ?? 0) > 0 ||
-        (totals['absent_days'] as num? ?? 0) > 0 ||
-        (totals['leave_days'] as num? ?? 0) > 0 ||
-        inProgress > 0 ||
-        needsCorrection > 0;
+    final required = _n('required_seconds');
+    final worked = _n('credited_seconds');
+    final short = _n('shortfall_seconds');
+    final extra = _n('extra_seconds');
+    final progress = required <= 0 ? 0.0 : (worked / required).clamp(0.0, 1.0);
+    // Present / Absent / Leave always fill the first row; extras follow.
+    final counts = <(int, String, ChipTone)>[
+      (_n('present_days'), 'Present', ChipTone.success),
+      (_n('absent_days'), 'Absent', _n('absent_days') > 0 ? ChipTone.error : ChipTone.neutral),
+      (_n('leave_days'), 'Leave', ChipTone.info),
+      if (_n('late_days') > 0) (_n('late_days'), 'Late', ChipTone.warning),
+      if (inProgress > 0) (inProgress, 'In progress', ChipTone.info),
+      if (needsCorrection > 0) (needsCorrection, 'To fix', ChipTone.error),
+    ];
 
     return SectionCard(
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        // 2x2 Bento Metric Grid
-        Row(
-          children: [
-            metricTile(
-              label: 'Expected',
-              value: OrgTime.hm(totals['required_seconds']),
-              icon: Icons.schedule_rounded,
-              bgColor: const Color(0xFFF6F8FC),
-              borderColor: const Color(0xFFE2E8F0),
-              iconColor: AppColors.primary,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            metricTile(
-              label: 'Worked',
-              value: OrgTime.hm(totals['credited_seconds']),
-              icon: Icons.timer_outlined,
-              bgColor: const Color(0xFFF0FDF4),
-              borderColor: const Color(0xFFDCFCE7),
-              iconColor: AppColors.success,
-              valueColor: AppColors.success,
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            metricTile(
-              label: 'Shortfall',
-              value: OrgTime.hm(totals['shortfall_seconds']),
-              icon: Icons.arrow_downward_rounded,
-              bgColor: short ? const Color(0xFFFEF2F2) : const Color(0xFFF8FAFC),
-              borderColor: short ? const Color(0xFFFEE2E2) : const Color(0xFFE2E8F0),
-              iconColor: short ? AppColors.error : AppColors.textSecondary,
-              valueColor: short ? AppColors.error : AppColors.text,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            metricTile(
-              label: 'Extra Time',
-              value: OrgTime.hm(totals['extra_seconds']),
-              icon: Icons.bolt_rounded,
-              bgColor: extra ? const Color(0xFFFAF5FF) : const Color(0xFFF8FAFC),
-              borderColor: extra ? const Color(0xFFF3E8FF) : const Color(0xFFE2E8F0),
-              iconColor: extra ? const Color(0xFF8B5CF6) : AppColors.textSecondary,
-              valueColor: extra ? const Color(0xFF7C3AED) : AppColors.text,
-            ),
-          ],
+        Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+          const AppIcon(Icons.timer_outlined, size: 44),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Worked this month', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 2),
+              Text.rich(
+                TextSpan(children: [
+                  TextSpan(
+                    text: OrgTime.hm(worked),
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.text),
+                  ),
+                  TextSpan(
+                    text: '  of ${OrgTime.hm(required)}',
+                    style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                  ),
+                ]),
+              ),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: AppSpacing.md),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 8,
+            backgroundColor: const Color(0xFFEFF1F4),
+            color: AppColors.success,
+            semanticsLabel: 'Worked ${OrgTime.hm(worked)} of ${OrgTime.hm(required)}',
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
-        // Full width container for attendance status breakdown
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE2E8F0)),
+        Row(children: [
+          Expanded(
+            child: _Metric(
+              label: 'Shortfall',
+              value: OrgTime.hm(short),
+              tone: short > 0 ? ChipTone.error : ChipTone.neutral,
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      AppIcon(Icons.circle, size: 10, color: AppColors.success),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Monthly Attendance',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.text,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${totals['present_days']} present',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF15803D),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (hasSubchips) ...[
-                const SizedBox(height: 10),
-                Wrap(spacing: AppSpacing.xs, runSpacing: AppSpacing.xs, children: [
-                  if ((totals['late_days'] as num? ?? 0) > 0)
-                    StatusChip('${totals['late_days']} late', tone: ChipTone.warning),
-                  if ((totals['absent_days'] as num? ?? 0) > 0)
-                    StatusChip('${totals['absent_days']} absent', tone: ChipTone.error),
-                  if ((totals['leave_days'] as num? ?? 0) > 0)
-                    StatusChip('${totals['leave_days']} leave', tone: ChipTone.info),
-                  if (inProgress > 0) StatusChip('$inProgress in progress', tone: ChipTone.info),
-                  if (needsCorrection > 0) StatusChip('$needsCorrection to fix', tone: ChipTone.error),
-                ]),
-              ],
-            ],
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _Metric(
+              label: 'Extra time',
+              value: OrgTime.hm(extra),
+              tone: extra > 0 ? ChipTone.info : ChipTone.neutral,
+            ),
           ),
-        ),
-        if (inProgress > 0 || needsCorrection > 0) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            needsCorrection > 0
-                ? 'Days to fix are left out of the totals until you send a correction.'
-                : 'Today is added to the totals when you check out.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-        const SizedBox(height: AppSpacing.sm),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF8FAFC),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(
-            children: [
-              const AppIcon(Icons.info_outline_rounded, size: 15, color: AppColors.textSecondary),
-              const SizedBox(width: 8),
+        ]),
+        const SizedBox(height: AppSpacing.md),
+        for (var i = 0; i < counts.length; i += 3) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.sm),
+          Row(children: [
+            for (var j = i; j < i + 3; j++) ...[
+              if (j > i) const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Text(
-                  'Extra time is informational and is not overtime pay.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 12),
-                ),
+                child: j < counts.length
+                    ? _CountTile(count: counts[j].$1, label: counts[j].$2, tone: counts[j].$3)
+                    : const SizedBox.shrink(),
               ),
             ],
-          ),
+          ]),
+        ],
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          needsCorrection > 0
+              ? 'Days to fix are left out of the totals until you send a correction.'
+              : inProgress > 0
+                  ? 'Today is added to the totals when you check out.'
+                  : 'Extra time is shown for information. It is not overtime pay.',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
       ]),
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({required this.label, required this.value, required this.tone});
+  final String label;
+  final String value;
+  final ChipTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = _toneColors(tone);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        const SizedBox(height: 2),
+        Text(value, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: tone == ChipTone.neutral ? AppColors.text : fg)),
+      ]),
+    );
+  }
+}
+
+class _CountTile extends StatelessWidget {
+  const _CountTile({required this.count, required this.label, required this.tone});
+  final int count;
+  final String label;
+  final ChipTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final (bg, fg) = _toneColors(tone);
+    return Semantics(
+      label: '$count $label',
+      excludeSemantics: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+        child: Column(children: [
+          Text('$count', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: fg)),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
+        ]),
+      ),
     );
   }
 }
@@ -447,121 +346,93 @@ class _DayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (label, tone, icon) = dayStatus(r);
+    final (label, tone, _) = dayStatus(r);
+    final (bg, fg) = _toneColors(tone);
     final slots = (r['leave_slots'] as num?)?.toInt() ?? 0;
     final hasPunch = r['effective_in_at'] != null;
     final isToday = r['shift_date'] == OrgTime.ymd(OrgTime.today());
+    final source = r['effective_source'] == 'manual'
+        ? ' · manual'
+        : r['effective_source'] == 'mixed'
+            ? ' · corrected'
+            : '';
+    final detail = [
+      if (r['outside_reason'] != null)
+        '${r['outside_reason']} · no check-in needed'
+      else if (hasPunch)
+        '${OrgTime.time(r['effective_in_at'])} – ${r['effective_out_at'] == null ? 'now' : OrgTime.time(r['effective_out_at'])}$source'
+      else if (r['is_required'] == true)
+        'Shift ${OrgTime.time(r['start_at'])} – ${OrgTime.time(r['end_at'])}',
+      if (slots > 0) leaveSlotLabel(slots),
+    ].join(' · ');
+    final shortfall = (r['shortfall_seconds'] as num? ?? 0) > 0;
 
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
-      child: InkWell(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
+        side: BorderSide(
+          color: isToday ? AppColors.primary.withValues(alpha: 0.5) : AppColors.border,
+          width: isToday ? 1.5 : 1,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
         onTap: () => context.push('/attendance/day?date=${r['shift_date']}'),
-        child: Container(
+        child: Padding(
           padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
-            border: Border.all(
-              color: isToday ? AppColors.primary.withValues(alpha: 0.45) : AppColors.border,
-              width: isToday ? 1.5 : 1.0,
-            ),
-          ),
           child: Row(children: [
             Container(
               width: 50,
-              height: 52,
-              decoration: BoxDecoration(
-                color: isToday ? AppColors.attendanceCard : const Color(0xFFF4F6F9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    OrgTime.date(r['shift_date'] as String?, pattern: 'd'),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: isToday ? AppColors.primary : AppColors.text,
-                    ),
-                  ),
-                  Text(
-                    OrgTime.date(r['shift_date'] as String?, pattern: 'EEE'),
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: isToday ? AppColors.primary : AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
+              height: 54,
+              decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(OrgTime.date(r['shift_date'] as String?, pattern: 'd'),
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800, color: fg, height: 1.1)),
+                Text(OrgTime.date(r['shift_date'] as String?, pattern: 'EEE'),
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
+              ]),
             ),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(
-                  children: [
-                    StatusChip(label, tone: tone, icon: icon),
-                    if (isToday) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Text(
-                          'Today',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primary),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 6),
-                if (hasPunch)
-                  Row(
-                    children: [
-                      const AppIcon(Icons.schedule_rounded, size: 13, color: AppColors.textSecondary),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          '${OrgTime.time(r['effective_in_at'])} – ${r['effective_out_at'] == null ? '…' : OrgTime.time(r['effective_out_at'])}'
-                          '${r['effective_source'] == 'manual' ? ' · manual' : r['effective_source'] == 'mixed' ? ' · corrected' : ''}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  )
-                else if (r['is_required'] == true)
-                  Row(
-                    children: [
-                      const AppIcon(Icons.schedule_rounded, size: 13, color: AppColors.textSecondary),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          'Shift ${OrgTime.time(r['start_at'])} – ${OrgTime.time(r['end_at'])}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 13),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
+                Row(children: [
+                  Flexible(
+                    child: Text(label,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: fg)),
                   ),
-                if (slots > 0) Text(leaveSlotLabel(slots), style: Theme.of(context).textTheme.bodySmall),
+                  if (isToday) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(color: AppColors.primary, borderRadius: BorderRadius.circular(6)),
+                      child: const Text('Today',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+                    ),
+                  ],
+                ]),
+                if (detail.isNotEmpty) ...[
+                  const SizedBox(height: 3),
+                  Text(detail,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                ],
               ]),
             ),
-            if (r['status'] == 'present')
-              Padding(
-                padding: const EdgeInsets.only(right: 4),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Text(OrgTime.hm(r['credited_seconds']), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                  if ((r['shortfall_seconds'] as num? ?? 0) > 0)
-                    Text('-${OrgTime.hm(r['shortfall_seconds'])}', style: const TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w600)),
-                ]),
-              ),
-            const AppIcon(Icons.chevron_right_rounded, color: Color(0xFFB0B9C6), size: 20),
+            if (r['status'] == 'present') ...[
+              const SizedBox(width: AppSpacing.sm),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(OrgTime.hm(r['credited_seconds']),
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: AppColors.text)),
+                if (shortfall)
+                  Text('-${OrgTime.hm(r['shortfall_seconds'])}',
+                      style: const TextStyle(color: AppColors.error, fontSize: 12, fontWeight: FontWeight.w600)),
+              ]),
+            ],
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFFB0B9C6), size: 20),
           ]),
         ),
       ),
@@ -580,17 +451,25 @@ class _CalendarGrid extends StatelessWidget {
     final first = DateTime(month.year, month.month);
     final days = DateTime(month.year, month.month + 1, 0).day;
     final lead = first.weekday - 1; // Monday first
+    final today = OrgTime.ymd(OrgTime.today());
     return SectionCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       child: Column(children: [
         Row(children: [
-          for (final d in const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'])
-            Expanded(child: Center(child: Text(d, style: Theme.of(context).textTheme.bodySmall))),
+          for (final d in const ['M', 'T', 'W', 'T', 'F', 'S', 'S'])
+            Expanded(
+              child: Center(
+                child: Text(d,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textSecondary)),
+              ),
+            ),
         ]),
         const SizedBox(height: AppSpacing.sm),
         GridView.count(
           crossAxisCount: 7,
           shrinkWrap: true,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
           physics: const NeverScrollableScrollPhysics(),
           children: [
             for (var i = 0; i < lead; i++) const SizedBox.shrink(),
@@ -599,16 +478,17 @@ class _CalendarGrid extends StatelessWidget {
                 day: d,
                 row: byDate[OrgTime.ymd(DateTime(month.year, month.month, d))],
                 date: OrgTime.ymd(DateTime(month.year, month.month, d)),
+                isToday: OrgTime.ymd(DateTime(month.year, month.month, d)) == today,
               ),
           ],
         ),
-        const SizedBox(height: AppSpacing.sm),
-        Wrap(spacing: AppSpacing.md, runSpacing: 4, children: const [
-          _Legend(color: AppColors.success, label: 'Present'),
-          _Legend(color: AppColors.warning, label: 'Late / pending'),
-          _Legend(color: AppColors.error, label: 'Absent / correction'),
-          _Legend(color: AppColors.primary, label: 'Leave'),
-          _Legend(color: Color(0xFFA7B1C2), label: 'Holiday / off'),
+        const SizedBox(height: AppSpacing.md),
+        Wrap(spacing: AppSpacing.md, runSpacing: 6, children: const [
+          _Legend(tone: ChipTone.success, label: 'Present'),
+          _Legend(tone: ChipTone.warning, label: 'Late / pending'),
+          _Legend(tone: ChipTone.error, label: 'Absent / fix'),
+          _Legend(tone: ChipTone.info, label: 'Leave'),
+          _Legend(tone: ChipTone.neutral, label: 'Holiday / off'),
         ]),
       ]),
     );
@@ -616,49 +496,56 @@ class _CalendarGrid extends StatelessWidget {
 }
 
 class _CalendarCell extends StatelessWidget {
-  const _CalendarCell({required this.day, required this.row, required this.date});
+  const _CalendarCell({required this.day, required this.row, required this.date, required this.isToday});
   final int day;
   final Map<String, dynamic>? row;
   final String date;
+  final bool isToday;
 
   @override
   Widget build(BuildContext context) {
     final r = row;
     final (label, tone, _) = r == null ? ('No schedule', ChipTone.neutral, Icons.remove) : dayStatus(r);
-    final color = switch (tone) {
-      ChipTone.success => AppColors.success,
-      ChipTone.warning => AppColors.warning,
-      ChipTone.error => AppColors.error,
-      ChipTone.info => AppColors.primary,
-      ChipTone.neutral => const Color(0xFFA7B1C2),
-    };
+    final upcoming = r?['status'] == 'upcoming';
+    final (bg, fg) = r == null || upcoming ? (Colors.transparent, AppColors.textSecondary) : _toneColors(tone);
     return Semantics(
       label: '$day, $label',
       button: r != null,
       excludeSemantics: true,
-      child: InkWell(
-        onTap: r == null ? null : () => context.push('/attendance/day?date=$date'),
-        borderRadius: BorderRadius.circular(10),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text('$day', style: const TextStyle(fontSize: 15)),
-          const SizedBox(height: 4),
-          AppIcon(Icons.circle, size: 10, color: r == null ? Colors.transparent : color),
-        ]),
+      child: Material(
+        color: bg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: isToday ? const BorderSide(color: AppColors.primary, width: 2) : BorderSide.none,
+        ),
+        child: InkWell(
+          onTap: r == null ? null : () => context.push('/attendance/day?date=$date'),
+          borderRadius: BorderRadius.circular(10),
+          child: Center(
+            child: Text('$day',
+                style: TextStyle(fontSize: 14, fontWeight: r == null || upcoming ? FontWeight.w500 : FontWeight.w700, color: fg)),
+          ),
+        ),
       ),
     );
   }
 }
 
 class _Legend extends StatelessWidget {
-  const _Legend({required this.color, required this.label});
-  final Color color;
+  const _Legend({required this.tone, required this.label});
+  final ChipTone tone;
   final String label;
 
   @override
   Widget build(BuildContext context) {
+    final (bg, fg) = _toneColors(tone);
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      AppIcon(Icons.circle, size: 10, color: color),
-      const SizedBox(width: 4),
+      Container(
+        width: 14,
+        height: 14,
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4), border: Border.all(color: fg, width: 1.5)),
+      ),
+      const SizedBox(width: 6),
       Text(label, style: Theme.of(context).textTheme.bodySmall),
     ]);
   }

@@ -68,9 +68,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         _Module('admin', 'Admin', 'Organisation setup and controls.', AppColors.attendanceCard, AppColors.primary, 'admin', [
           if (s?.isAdmin ?? false) ('Organization', () => go('/admin/organization')),
           if (s?.canMasterData ?? false) ('Teams', () => go('/admin/teams')),
-          if (s?.isAdmin ?? false) ('Offices', () => go('/admin/offices')),
+          if (s?.isAdmin ?? false) ('Offices & Wi-Fi', () => go('/admin/offices')),
+          if (s?.isAdmin ?? false) ('Outside work', () => go('/admin/outside-work')),
           if ((s?.canMasterData ?? false) || (s?.canDraftPolicy ?? false)) ('Shifts', () => go('/admin/shifts')),
           if (s?.canDraftPolicy ?? false) ('Leave & holidays', () => go('/admin/leave-policies')),
+          if (s?.isAdmin ?? false) ('Weekly off (Saturdays)', () => go('/admin/leave-policies?tab=holidays')),
           if (s?.canDraftPolicy ?? false) ('Company policies', () => go('/policies')),
           if (s?.isAdmin ?? false) ('Permissions', () => go('/admin/permissions')),
           if (s?.isAdmin ?? false) ('Annual archive', () => go('/admin/archive')),

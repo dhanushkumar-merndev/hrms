@@ -2,18 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// The app's own duotone SVG icon set (`assets/icons/<name>.svg`). Each file is
-/// drawn in black with a soft 20% fill and tinted at runtime, so an icon takes
-/// the colour of wherever it is used, exactly like a Material [Icon].
+/// Colourful illustrations used in place of meaningful icons
+/// (`assets/illus/<name>.svg`, drawn untinted), plus the tinted status dot
+/// (`assets/icons/dot.svg`). Small control glyphs (arrows, close, plus…) are
+/// not listed and stay Material icons.
 const appIconNames = [
-  'add',
   'admin_panel_settings',
   'alt_route',
   'archive',
-  'arrow_back',
-  'arrow_downward',
-  'arrow_drop_down',
-  'arrow_right_alt',
   'assignment',
   'attach_file',
   'badge',
@@ -25,23 +21,15 @@ const appIconNames = [
   'campaign',
   'cancel',
   'celebration',
-  'check',
   'check_circle',
-  'chevron_left',
-  'chevron_right',
-  'close',
   'cloud_done',
   'cloud_off',
   'cloud_upload',
   'construction',
-  'copy',
   'credit_card',
   'date_range',
-  'delete',
   'description',
   'dot',
-  'download',
-  'edit',
   'edit_calendar',
   'edit_note',
   'error',
@@ -51,7 +39,6 @@ const appIconNames = [
   'event_repeat',
   'exposure',
   'fact_check',
-  'filter_list',
   'fingerprint',
   'flight_takeoff',
   'folder',
@@ -71,8 +58,6 @@ const appIconNames = [
   'info',
   'insights',
   'inventory_2',
-  'keyboard_arrow_down',
-  'keyboard_arrow_up',
   'location',
   'location_add',
   'location_city',
@@ -83,13 +68,9 @@ const appIconNames = [
   'login',
   'logout',
   'meeting_room',
-  'minus',
-  'more_vert',
   'my_location',
-  'north_east',
   'notifications',
   'password',
-  'paste',
   'pause_circle',
   'person',
   'person_add',
@@ -102,37 +83,23 @@ const appIconNames = [
   'playlist_add',
   'policy',
   'preview',
-  'priority_high',
-  'radio_off',
-  'radio_on',
   'receipt_long',
-  'refresh',
   'savings',
   'schedule',
-  'search',
-  'send',
   'settings',
   'settings_backup_restore',
-  'share',
   'shield',
   'shield_check',
   'smartphone',
-  'swap_horiz',
-  'sync',
-  'sync_problem',
   'table_chart',
   'table_view',
   'task_alt',
   'timelapse',
   'timer',
-  'tune',
-  'undo',
   'upload_file',
   'verified',
   'view_list',
   'view_week',
-  'visibility',
-  'visibility_off',
   'wallet',
   'warning',
   'wb_sunny',
@@ -142,19 +109,14 @@ const appIconNames = [
   'work',
 ];
 
-/// Material icon -> custom SVG. Several Material variants share one drawing.
+/// Material icon -> illustration. Several Material variants share one drawing.
 final Map<IconData, String> appIconAssets = {
   Icons.account_balance_outlined: 'bank',
   Icons.account_balance_wallet_outlined: 'wallet',
   Icons.add_location_alt_outlined: 'location_add',
-  Icons.add_rounded: 'add',
   Icons.admin_panel_settings_outlined: 'admin_panel_settings',
   Icons.alt_route_rounded: 'alt_route',
   Icons.archive_outlined: 'archive',
-  Icons.arrow_back: 'arrow_back',
-  Icons.arrow_downward_rounded: 'arrow_downward',
-  Icons.arrow_drop_down_rounded: 'arrow_drop_down',
-  Icons.arrow_right_alt_rounded: 'arrow_right_alt',
   Icons.assignment_outlined: 'assignment',
   Icons.attach_file_rounded: 'attach_file',
   Icons.badge_outlined: 'badge',
@@ -173,25 +135,16 @@ final Map<IconData, String> appIconAssets = {
   Icons.celebration_rounded: 'celebration',
   Icons.check_circle_outline_rounded: 'check_circle',
   Icons.check_circle_rounded: 'check_circle',
-  Icons.check_rounded: 'check',
-  Icons.chevron_left_rounded: 'chevron_left',
-  Icons.chevron_right_rounded: 'chevron_right',
   Icons.circle: 'dot',
-  Icons.close_rounded: 'close',
   Icons.cloud_done_rounded: 'cloud_done',
   Icons.cloud_off_rounded: 'cloud_off',
   Icons.cloud_upload_outlined: 'cloud_upload',
   Icons.construction_rounded: 'construction',
-  Icons.content_paste_rounded: 'paste',
-  Icons.copy_rounded: 'copy',
   Icons.credit_card_rounded: 'credit_card',
   Icons.date_range_rounded: 'date_range',
-  Icons.delete_outline_rounded: 'delete',
   Icons.description_outlined: 'description',
-  Icons.download_rounded: 'download',
   Icons.edit_calendar_outlined: 'edit_calendar',
   Icons.edit_note_rounded: 'edit_note',
-  Icons.edit_outlined: 'edit',
   Icons.error_outline_rounded: 'error',
   Icons.event_available_outlined: 'event_available',
   Icons.event_available_rounded: 'event_available',
@@ -202,7 +155,6 @@ final Map<IconData, String> appIconAssets = {
   Icons.event_repeat_rounded: 'event_repeat',
   Icons.exposure_rounded: 'exposure',
   Icons.fact_check_outlined: 'fact_check',
-  Icons.filter_list_rounded: 'filter_list',
   Icons.fingerprint: 'fingerprint',
   Icons.fingerprint_rounded: 'fingerprint',
   Icons.flight_takeoff_rounded: 'flight_takeoff',
@@ -227,9 +179,6 @@ final Map<IconData, String> appIconAssets = {
   Icons.info_outline_rounded: 'info',
   Icons.insights_rounded: 'insights',
   Icons.inventory_2_outlined: 'inventory_2',
-  Icons.ios_share_rounded: 'share',
-  Icons.keyboard_arrow_down_rounded: 'keyboard_arrow_down',
-  Icons.keyboard_arrow_up_rounded: 'keyboard_arrow_up',
   Icons.location_city_outlined: 'location_city',
   Icons.location_disabled_outlined: 'location_off',
   Icons.location_off_outlined: 'location_off',
@@ -240,10 +189,8 @@ final Map<IconData, String> appIconAssets = {
   Icons.login_rounded: 'login',
   Icons.logout_rounded: 'logout',
   Icons.meeting_room_outlined: 'meeting_room',
-  Icons.more_vert_rounded: 'more_vert',
   Icons.my_location_outlined: 'my_location',
   Icons.my_location_rounded: 'my_location',
-  Icons.north_east_rounded: 'north_east',
   Icons.notifications_none_rounded: 'notifications',
   Icons.password_rounded: 'password',
   Icons.pause_circle_outline_rounded: 'pause_circle',
@@ -260,44 +207,27 @@ final Map<IconData, String> appIconAssets = {
   Icons.playlist_add_rounded: 'playlist_add',
   Icons.policy_outlined: 'policy',
   Icons.preview_outlined: 'preview',
-  Icons.priority_high_rounded: 'priority_high',
-  Icons.radio_button_checked_rounded: 'radio_on',
-  Icons.radio_button_off_rounded: 'radio_off',
-  Icons.radio_button_unchecked: 'radio_off',
   Icons.receipt_long_outlined: 'receipt_long',
-  Icons.refresh: 'refresh',
-  Icons.refresh_rounded: 'refresh',
-  Icons.remove: 'minus',
   Icons.report_problem_outlined: 'warning',
-  Icons.save_alt_rounded: 'download',
   Icons.savings_outlined: 'savings',
   Icons.schedule_rounded: 'schedule',
-  Icons.search_rounded: 'search',
   Icons.security_rounded: 'shield_check',
-  Icons.send_rounded: 'send',
   Icons.settings_backup_restore_rounded: 'settings_backup_restore',
   Icons.settings_outlined: 'settings',
   Icons.shield_outlined: 'shield',
   Icons.smartphone_rounded: 'smartphone',
   Icons.supervisor_account_outlined: 'groups',
-  Icons.swap_horiz_rounded: 'swap_horiz',
-  Icons.sync_problem_rounded: 'sync_problem',
-  Icons.sync_rounded: 'sync',
   Icons.table_chart_outlined: 'table_chart',
   Icons.table_view_rounded: 'table_view',
   Icons.task_alt_rounded: 'task_alt',
   Icons.timelapse_rounded: 'timelapse',
   Icons.timer_outlined: 'timer',
-  Icons.tune_rounded: 'tune',
-  Icons.undo_rounded: 'undo',
   Icons.upload_file_rounded: 'upload_file',
   Icons.verified_outlined: 'verified',
   Icons.verified_rounded: 'verified',
   Icons.verified_user_outlined: 'shield_check',
   Icons.view_list_rounded: 'view_list',
   Icons.view_week_outlined: 'view_week',
-  Icons.visibility_off_outlined: 'visibility_off',
-  Icons.visibility_outlined: 'visibility',
   Icons.warning_amber_rounded: 'warning',
   Icons.wb_sunny_rounded: 'wb_sunny',
   Icons.weekend_outlined: 'weekend',
@@ -307,10 +237,9 @@ final Map<IconData, String> appIconAssets = {
   Icons.work_outline_rounded: 'work',
 };
 
-/// Drop-in replacement for [Icon]: draws the custom SVG for [icon], sized and
-/// coloured from the arguments or the surrounding [IconTheme] (so disabled
-/// buttons, nav bars and input decorations tint it correctly). Icons without
-/// a custom drawing fall back to the Material glyph.
+/// Drop-in replacement for [Icon]: draws the illustration for [icon] at the
+/// given or themed size. Only the status dot is tinted (by [color] or the
+/// [IconTheme]); icons without an illustration fall back to the Material glyph.
 class AppIcon extends StatelessWidget {
   const AppIcon(this.icon, {super.key, this.size, this.color, this.semanticLabel});
   final IconData? icon;
@@ -326,24 +255,31 @@ class AppIcon extends StatelessWidget {
     final s = size ?? theme.size ?? 24;
     var c = color ?? theme.color ?? const Color(0xFF263342);
     if (color == null && theme.opacity != null) c = c.withValues(alpha: c.a * theme.opacity!);
+    final tinted = name == 'dot';
     final picture = SvgPicture.asset(
-      'assets/icons/$name.svg',
+      _path(name),
       width: s,
       height: s,
-      colorFilter: ColorFilter.mode(c, BlendMode.srcIn),
+      colorFilter: tinted ? ColorFilter.mode(c, BlendMode.srcIn) : null,
       placeholderBuilder: (_) => SizedBox.square(dimension: s),
       errorBuilder: (_, _, _) => Icon(icon, size: s, color: c),
     );
-    final sized = ExcludeSemantics(child: SizedBox.square(dimension: s, child: picture));
+    // Like Icon: when a parent forces a bigger box (an input's 48 px icon
+    // slot), stay at the requested size and centre instead of stretching.
+    final sized = ExcludeSemantics(
+      child: Center(widthFactor: 1, heightFactor: 1, child: SizedBox.square(dimension: s, child: picture)),
+    );
     return semanticLabel == null ? sized : Semantics(label: semanticLabel, child: sized);
   }
 }
+
+String _path(String name) => name == 'dot' ? 'assets/icons/dot.svg' : 'assets/illus/$name.svg';
 
 /// Loads every icon into flutter_svg's cache once at startup so screens never
 /// show a blank frame while an icon decodes.
 Future<void> precacheAppIcons() async {
   for (final name in appIconNames) {
-    final loader = SvgAssetLoader('assets/icons/$name.svg');
+    final loader = SvgAssetLoader(_path(name));
     try {
       await svg.cache.putIfAbsent(loader.cacheKey(null), () => loader.loadBytes(null));
     } on FlutterError {

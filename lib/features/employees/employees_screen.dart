@@ -125,6 +125,7 @@ class _EmployeesScreenState extends ConsumerState<EmployeesScreen> {
                 return offsetPage(res, offset);
               },
               empty: const EmptyState(icon: Icons.person_search_outlined, title: 'No employees match'),
+              loading: const PeopleSkeleton(),
               itemBuilder: (context, e) {
                 final roles = ((e['roles'] as List?) ?? const []).cast<String>();
                 return PersonTile(

@@ -11,6 +11,9 @@ import 'theme.dart';
 class HrmsApp extends ConsumerStatefulWidget {
   const HrmsApp({super.key});
 
+  /// True when main() deferred the first frame; released once, see below.
+  static bool launchScreenHeld = false;
+
   @override
   ConsumerState<HrmsApp> createState() => _HrmsAppState();
 }
@@ -30,6 +33,20 @@ class _HrmsAppState extends ConsumerState<HrmsApp> {
         ref.invalidate(homeSummaryProvider);
       }
     });
+    // Release Android's launch screen as soon as we know where to go (Home,
+    // Sign in…), or after 4 s so a slow network still shows the splash with
+    // its "Try again".
+    if (HrmsApp.launchScreenHeld) {
+      void release() {
+        if (!HrmsApp.launchScreenHeld) return;
+        HrmsApp.launchScreenHeld = false;
+        WidgetsBinding.instance.allowFirstFrame();
+      }
+      ref.listenManual(sessionProvider, (_, next) {
+        if (next.phase != SessionPhase.loading) release();
+      }, fireImmediately: true);
+      Future<void>.delayed(const Duration(seconds: 4), release);
+    }
     // Push (optional): re-bind after sign-in, refresh counts on arrival, and
     // open the in-app route when a notification is tapped.
     ref.listenManual(sessionProvider, (prev, next) {
@@ -56,6 +73,12 @@ class _HrmsAppState extends ConsumerState<HrmsApp> {
       debugShowCheckedModeBanner: false,
       theme: buildTheme(),
       routerConfig: ref.watch(routerProvider),
+      // Tapping anywhere outside a text field closes the keyboard.
+      builder: (context, child) => GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: child,
+      ),
     );
   }
 }

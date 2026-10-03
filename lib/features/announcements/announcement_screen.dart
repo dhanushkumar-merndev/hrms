@@ -78,9 +78,11 @@ class _AnnouncementScreenState extends ConsumerState<AnnouncementScreen> {
           SectionCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               TextField(controller: _title, maxLength: 120, decoration: const InputDecoration(labelText: 'Title')),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                   controller: _body, maxLength: 500, minLines: 3, maxLines: 6,
                   decoration: const InputDecoration(labelText: 'Message (optional)')),
+              const SizedBox(height: AppSpacing.md),
               DropdownButtonFormField<String?>(
                 icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
                 initialValue: _teamId,

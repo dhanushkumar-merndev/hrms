@@ -108,7 +108,8 @@ class _DocumentDetailsDialogState extends State<_DocumentDetailsDialog> {
             },
             decoration: InputDecoration(labelText: 'Document name', hintText: 'e.g. Aadhaar card', errorText: _error),
           ),
-          if (widget.askDate)
+          if (widget.askDate) ...[
+            const SizedBox(height: AppSpacing.md),
             ListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text('Document date'),
@@ -120,6 +121,7 @@ class _DocumentDetailsDialogState extends State<_DocumentDetailsDialog> {
                 if (d != null) setState(() => _date = d);
               },
             ),
+          ],
           if (widget.note != null) Text(widget.note!, style: Theme.of(context).textTheme.bodySmall),
         ]),
       ),
@@ -285,6 +287,7 @@ class DocumentsScreen extends ConsumerWidget {
             child: AsyncView(
               value: data,
               onRetry: () => ref.invalidate(myDocumentsProvider),
+              loading: const DocumentsSkeleton(),
               builder: (d) {
                 final company = ((d['company'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList();
                 final mine = ((d['mine'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList();

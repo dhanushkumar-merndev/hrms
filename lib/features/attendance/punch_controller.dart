@@ -3,6 +3,8 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:network_info_plus/network_info_plus.dart';
+import 'package:wifi_scan/wifi_scan.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
@@ -217,6 +219,8 @@ class PunchController extends Notifier<PunchState> {
     }
     final operationKey = ApiClient.newOperationKey();
     state = s.copy(phase: PunchPhase.verifying);
+    // Scan for office Wi-Fi in parallel with the challenge and fingerprint.
+    final wifi = _wifiInfo();
     try {
       await SecureSessionStorage.storage.write(
           key: _pendingKey, value: jsonEncode({'key': operationKey, 'action': action, 'employee': _session.employeeId}));
@@ -253,7 +257,8 @@ class PunchController extends Notifier<PunchState> {
       );
       final signature = await _deviceKey.signAuthorized(Uint8List.fromList(payload.bytes));
 
-      final res = await _api.function('punch', payload.toRequest(signature, isMocked: sample.isMocked));
+      final res = await _api.function(
+          'punch', payload.toRequest(signature, isMocked: sample.isMocked, wifiSsid: (await wifi).$1, wifiNearby: (await wifi).$2));
       await _finish(res.map);
     } on DeviceKeyException catch (e) {
       await _clearPending();
@@ -322,14 +327,44 @@ class PunchController extends Notifier<PunchState> {
     return false;
   }
 
+  /// Connected Wi-Fi name (Android wraps it in quotes) and the Wi-Fi names
+  /// seen nearby. The server accepts the punch when either matches the
+  /// office list, so being at the office is enough even on mobile data.
+  /// Android throttles scans; the last system scan is used when a new one is refused.
+  static Future<(String?, List<String>)> _wifiInfo() async {
+    String? connected;
+    try {
+      final name = (await NetworkInfo().getWifiName())?.replaceAll('"', '').trim();
+      connected = name == null || name.isEmpty || name == '<unknown ssid>' ? null : name;
+    } catch (_) {}
+    final nearby = <String>{};
+    try {
+      final scan = WiFiScan.instance;
+      if (await scan.canStartScan() == CanStartScan.yes) {
+        await scan.startScan();
+        await Future<void>.delayed(const Duration(seconds: 2));
+      }
+      if (await scan.canGetScannedResults() == CanGetScannedResults.yes) {
+        for (final ap in await scan.getScannedResults()) {
+          final n = ap.ssid.trim();
+          if (n.isNotEmpty) nearby.add(n.length > 64 ? n.substring(0, 64) : n);
+          if (nearby.length >= 30) break;
+        }
+      }
+    } catch (_) {}
+    return (connected, nearby.toList());
+  }
+
   Future<void> _clearPending() => SecureSessionStorage.storage.delete(key: _pendingKey);
 
   static bool _retryableCode(String code) =>
-      const {'OUTSIDE_ZONE', 'LOCATION_INACCURATE', 'LOCATION_STALE', 'VERIFICATION_FAILED', 'RATE_LIMITED'}.contains(code);
+      const {'OUTSIDE_ZONE', 'WIFI_REQUIRED', 'LOCATION_INACCURATE', 'LOCATION_STALE', 'VERIFICATION_FAILED', 'RATE_LIMITED'}.contains(code);
 
   static String _unavailableMessage(Map<String, dynamic>? shift) {
     if (shift == null) return 'No shift is scheduled for you today.';
     return switch (shift['blocked_reason']) {
+      'outside_work' =>
+        'Outside work today${shift['outside_reason'] == null ? '' : ' (${shift['outside_reason']})'}. No check-in or check-out is needed.',
       'on_leave' => 'You are on approved leave today.',
       'holiday' => 'Happy holiday! No check-in or check-out is needed today.',
       'weekly_off' => 'Today is your weekly off.',

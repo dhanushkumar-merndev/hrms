@@ -38,8 +38,9 @@ String requestTitle(Map<String, dynamic> r) {
 }
 
 String requestDates(Map<String, dynamic> r) {
-  if (r['kind'] == 'correction')
+  if (r['kind'] == 'correction') {
     return OrgTime.date(r['target_shift_date'] as String?);
+  }
   if (r['kind'] == 'bank_details') {
     return 'Submitted ${OrgTime.date(r['submitted_at'] as String?)}';
   }
@@ -69,7 +70,11 @@ class RequestTile extends StatelessWidget {
     final isBank = r['kind'] == 'bank_details';
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
         onTap: onTap,
@@ -232,8 +237,10 @@ class RevisionView extends StatelessWidget {
       children: [
         KeyValueRow('Type', (payload['leave_type_name'] as String?) ?? '—'),
         KeyValueRow(
-          'Dates',
-          '${OrgTime.date(payload['start_date'] as String?)} – ${OrgTime.date(payload['end_date'] as String?)}',
+          payload['start_date'] == payload['end_date'] ? 'Date' : 'Dates',
+          payload['start_date'] == payload['end_date']
+              ? OrgTime.date(payload['start_date'] as String?)
+              : '${OrgTime.date(payload['start_date'] as String?)} – ${OrgTime.date(payload['end_date'] as String?)}',
         ),
         KeyValueRow('Working days', unitsLabel(payload['units'] as num?)),
         KeyValueRow('Reason', (payload['reason'] as String?) ?? '—'),
@@ -274,6 +281,8 @@ class EventTimeline extends StatelessWidget {
     'edited' => 'Edited',
     'opened' => 'Opened for review',
     'approved' => 'Approved',
+    'auto_approved' => 'Approved (Admin, no approver needed)',
+    'revoked' => 'Revoked',
     'rejected' => 'Not approved',
     'returned' => 'Returned for changes',
     'withdrawn' => 'Withdrawn',
@@ -288,40 +297,94 @@ class EventTimeline extends StatelessWidget {
     _ => a ?? '',
   };
 
+  /// Illustration + soft tint for each step, so the history reads at a glance.
+  static (IconData, Color) _art(String? a) => switch (a) {
+    'submitted' => (Icons.upload_file_rounded, AppColors.attendanceCard),
+    'resubmitted' => (Icons.event_repeat_rounded, AppColors.attendanceCard),
+    'edited' => (Icons.edit_note_rounded, AppColors.salaryCard),
+    'opened' => (Icons.preview_outlined, AppColors.leaveCard),
+    'approved' || 'withdrawal_accepted' || 'cancellation_approved' => (Icons.check_circle_rounded, AppColors.successSoft),
+    'auto_approved' => (Icons.verified_rounded, AppColors.successSoft),
+    'rejected' || 'withdrawal_declined' || 'cancellation_declined' => (Icons.cancel_rounded, AppColors.errorSoft),
+    'returned' => (Icons.history_rounded, AppColors.warningSoft),
+    'revoked' => (Icons.settings_backup_restore_rounded, AppColors.errorSoft),
+    'withdrawn' || 'withdrawal_requested' || 'cancellation_requested' => (Icons.event_busy_rounded, AppColors.warningSoft),
+    'reassigned' => (Icons.person_search_outlined, AppColors.workspaceCard),
+    'holiday_reconciled' => (Icons.celebration_rounded, AppColors.holidayCard),
+    _ => (Icons.task_alt_rounded, AppColors.attendanceCard),
+  };
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (final e in events)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
+        for (var i = 0; i < events.length; i++)
+          IntrinsicHeight(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 4),
-                  child: AppIcon(Icons.circle, size: 10, color: AppColors.primary),
+                // Rail: illustration bubble with a line joining the next step.
+                SizedBox(
+                  width: 44,
+                  child: Column(children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: _art(events[i]['action'] as String?).$2,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppColors.surface, width: 2),
+                      ),
+                      alignment: Alignment.center,
+                      child: AppIcon(_art(events[i]['action'] as String?).$1, size: 24),
+                    ),
+                    if (i < events.length - 1)
+                      Expanded(
+                        child: Container(
+                          width: 2,
+                          margin: const EdgeInsets.symmetric(vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.border,
+                            borderRadius: BorderRadius.circular(1),
+                          ),
+                        ),
+                      ),
+                  ]),
                 ),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${_label(e['action'] as String?)}${e['revision_no'] != null ? ' · v${e['revision_no']}' : ''}',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      Text(
-                        '${(e['actor'] as Map?)?['name'] ?? 'System'} · ${OrgTime.dateTime(e['created_at'])}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      if (e['reason'] != null)
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 2, bottom: i < events.length - 1 ? AppSpacing.lg : 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          '“${e['reason']}”',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                          '${_label(events[i]['action'] as String?)}'
+                          '${events[i]['revision_no'] != null ? ' · v${events[i]['revision_no']}' : ''}',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
                         ),
-                    ],
+                        const SizedBox(height: 2),
+                        Text(
+                          '${(events[i]['actor'] as Map?)?['name'] ?? 'System'} · ${OrgTime.dateTime(events[i]['created_at'])}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (events[i]['reason'] != null) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.background,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '“${events[i]['reason']}”',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
               ],

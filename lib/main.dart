@@ -32,6 +32,10 @@ Future<void> main() async {
   );
   await SessionController.clearSensitiveTemp();
   await PushService.init();
+  // One splash only: keep Android's launch screen up until the session is
+  // known (HrmsApp releases it), instead of showing a second Flutter splash.
+  WidgetsBinding.instance.deferFirstFrame();
+  HrmsApp.launchScreenHeld = true;
   runApp(ProviderScope(
     // Only transient network failures are retried automatically; server
     // decisions (denied, validation, conflicts) are shown immediately.

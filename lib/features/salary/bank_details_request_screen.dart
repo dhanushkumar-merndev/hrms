@@ -221,14 +221,14 @@ class _BankDetailsRequestScreenState
                     helper: 'e.g. HDFC Bank',
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: _holder,
                   maxLength: 200,
                   textCapitalization: TextCapitalization.words,
                   decoration: _dec('Account holder name', 'account_holder'),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: _account,
                   keyboardType: TextInputType.number,
@@ -240,7 +240,7 @@ class _BankDetailsRequestScreenState
                     helper: 'Only the last 4 digits are kept in the app; the approver verifies your proof.',
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: _ifsc,
                   maxLength: 11,
@@ -250,7 +250,7 @@ class _BankDetailsRequestScreenState
                   ],
                   decoration: _dec('IFSC', 'ifsc', helper: 'e.g. HDFC0001234'),
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: _reason,
                   maxLength: 500,

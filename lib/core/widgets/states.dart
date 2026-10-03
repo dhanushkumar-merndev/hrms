@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/theme.dart';
 import '../api/api_exception.dart';
 import 'app_icon.dart';
+import 'skeleton.dart';
+
+export 'skeleton.dart';
 
 /// Renders an AsyncValue with distinct loading, empty, error, offline and
 /// unauthorized states (design.md §4: never conflate "no rows" with failure).
@@ -116,25 +119,32 @@ class UnauthorizedState extends StatelessWidget {
 }
 
 class SkeletonList extends StatelessWidget {
-  const SkeletonList({super.key, this.items = 4, this.height = 72});
+  const SkeletonList({
+    super.key,
+    this.items = 4,
+    this.height = 72,
+    this.tone = SkeletonTone.grey,
+  });
   final int items;
   final double height;
+  final SkeletonTone tone;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       label: 'Loading',
-      child: ListView.separated(
-        padding: const EdgeInsets.all(AppSpacing.page),
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
-        itemCount: items,
-        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-        itemBuilder: (_, _) => Container(
-          height: height,
-          decoration: BoxDecoration(
-            color: const Color(0xFFECEFF3),
-            borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
+      child: SkeletonShimmer(
+        tone: tone,
+        child: ListView.separated(
+          padding: const EdgeInsets.all(AppSpacing.page),
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          itemCount: items,
+          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+          itemBuilder: (_, i) => SkeletonTile(
+            avatarSize: height > 80 ? 48 : 42,
+            titleWidth: i.isEven ? 140 : 180,
+            subtitleWidth: i.isEven ? 210 : 160,
           ),
         ),
       ),

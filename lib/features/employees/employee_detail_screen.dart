@@ -97,11 +97,13 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                   maxLength: 200,
                   decoration: const InputDecoration(labelText: 'Full name'),
                 ),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: designation,
                   maxLength: 120,
                   decoration: const InputDecoration(labelText: 'Designation'),
                 ),
+                const SizedBox(height: AppSpacing.md),
                 DropdownButtonFormField<String?>(
                   icon: const AppIcon(Icons.keyboard_arrow_down_rounded),
                   initialValue: dept,
@@ -115,12 +117,14 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 DateField(label: 'Joining date', date: join, onChanged: (d) => setState(() => join = d)),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: email,
                   maxLength: 200,
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(labelText: 'Work email'),
                 ),
+                const SizedBox(height: AppSpacing.md),
                 TextField(
                   controller: phone,
                   maxLength: 40,
@@ -515,6 +519,7 @@ class _EmployeeDetailScreenState extends ConsumerState<EmployeeDetailScreen> {
         child: AsyncView(
           value: data,
           onRetry: _reload,
+          loading: const ProfileSkeleton(),
           builder: (res) {
             final e = res.map;
             final version = res.version;

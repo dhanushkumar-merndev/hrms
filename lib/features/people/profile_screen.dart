@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
+import '../../core/auth/session_controller.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
 import '../../core/widgets/app_icon.dart';
@@ -87,6 +88,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final data = ref.watch(myProfileProvider);
+    final me = ref.watch(sessionContextProvider);
+    final canEditWork = me?.canMasterData ?? false;
     return Scaffold(
       appBar: AppBar(title: const Text('My profile'), actions: [
         TextButton.icon(
@@ -99,6 +102,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       body: AsyncView(
         value: data,
         onRetry: () => ref.invalidate(myProfileProvider),
+        loading: const ProfileSkeleton(),
         builder: (res) {
           final p = res.map;
           final roles = ((p['roles'] as List?) ?? const []).cast<String>();
@@ -156,7 +160,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: AppSpacing.lg),
               SectionCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Work', style: Theme.of(context).textTheme.titleSmall),
+                  Row(children: [
+                    Expanded(child: Text('Work', style: Theme.of(context).textTheme.titleSmall)),
+                    // Admin / HR edit their own work details directly.
+                    if (canEditWork && me != null)
+                      TextButton.icon(
+                        onPressed: () async {
+                          await context.push('/employees/${me.employeeId}');
+                          ref.invalidate(myProfileProvider);
+                        },
+                        icon: const AppIcon(Icons.edit_outlined),
+                        label: const Text('Edit'),
+                      ),
+                  ]),
                   const SizedBox(height: AppSpacing.sm),
                   if (nameOf(p['department']) != null) KeyValueRow('Department', nameOf(p['department'])!),
                   if (nameOf(p['team']) != null) KeyValueRow('Team', nameOf(p['team'])!),
@@ -172,8 +188,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   KeyValueRow('Joined', OrgTime.date(p['join_date'] as String?)),
                   if (p['business_email'] != null) KeyValueRow('Work email', p['business_email'] as String),
                   if (p['business_phone'] != null) KeyValueRow('Work phone', p['business_phone'] as String),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text('Ask HR to change your work details.', style: Theme.of(context).textTheme.bodySmall),
+                  if (!canEditWork) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text('Ask HR or Admin to change your work details.', style: Theme.of(context).textTheme.bodySmall),
+                  ],
                 ]),
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -187,7 +205,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       label: Text(hasPrivateDetails ? 'Edit' : 'Add'),
                     ),
                   ]),
-                  Text('Visible only to you and HR.', style: Theme.of(context).textTheme.bodySmall),
+                  Text('Visible only to you, HR and Admin.', style: Theme.of(context).textTheme.bodySmall),
                   const SizedBox(height: AppSpacing.sm),
                   if (hasPrivateDetails)
                     PrivateDetailsView(private: private)
@@ -298,12 +316,17 @@ Future<bool> showPrivateDetailsEditor(BuildContext context, WidgetRef ref,
           const SizedBox(height: AppSpacing.md),
           TextField(controller: fields['personal_email'], keyboardType: TextInputType.emailAddress,
               maxLength: 200, decoration: dec('Personal email')),
+          const SizedBox(height: AppSpacing.md),
           TextField(controller: fields['personal_phone'], keyboardType: TextInputType.phone,
               maxLength: 40, decoration: dec('Personal phone')),
+          const SizedBox(height: AppSpacing.md),
           TextField(controller: fields['address'], maxLength: 500, minLines: 2, maxLines: 4, decoration: dec('Address')),
+          const SizedBox(height: AppSpacing.md),
           TextField(controller: fields['emergency_contact_name'], maxLength: 120, decoration: dec('Emergency contact name')),
+          const SizedBox(height: AppSpacing.md),
           TextField(controller: fields['emergency_contact_phone'], keyboardType: TextInputType.phone,
               maxLength: 40, decoration: dec('Emergency contact phone')),
+          const SizedBox(height: AppSpacing.md),
           DateField(
             label: 'Date of birth',
             date: dob,

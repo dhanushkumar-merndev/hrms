@@ -30,7 +30,10 @@ class PickerField extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           errorText: error,
-          suffixIcon: AppIcon(icon ?? Icons.arrow_drop_down_rounded),
+          suffixIcon: Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: AppIcon(icon ?? Icons.arrow_drop_down_rounded, size: 20),
+          ),
           enabled: onTap != null,
         ),
         child: Text(value ?? 'Choose', style: TextStyle(color: value == null ? AppColors.textSecondary : AppColors.text)),

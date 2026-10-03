@@ -109,7 +109,7 @@ class _LeaveScreenState extends ConsumerState<LeaveScreen> {
                   AsyncView(
                     value: balances,
                     onRetry: () => ref.invalidate(leaveBalancesProvider(_year)),
-                    loading: const SkeletonList(items: 2, height: 110),
+                    loading: const LeaveSkeleton(),
                     builder: (d) {
                       final year = (d['leave_year'] as num).toInt();
                       final start =
@@ -420,23 +420,15 @@ class _HolidayCard extends StatelessWidget {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
           border: Border.all(color: AppColors.border),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x12263342),
-              blurRadius: 16,
-              offset: Offset(0, 6),
-              spreadRadius: -4,
-            ),
-          ],
         ),
         child: Row(
           children: [
             Container(
-              width: 54,
+              width: 50,
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               decoration: BoxDecoration(
                 color: AppColors.holidayCard,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
                 children: [
@@ -453,7 +445,7 @@ class _HolidayCard extends StatelessWidget {
                   Text(
                     date == null ? '—' : '${date.day}',
                     style: const TextStyle(
-                      fontSize: 22,
+                      fontSize: 20,
                       height: 1.05,
                       fontWeight: FontWeight.w800,
                       color: AppColors.text,
@@ -490,7 +482,7 @@ class _HolidayCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            Illustration('holiday$illustration', size: 68),
+            Illustration('holiday$illustration', size: 48),
           ],
         ),
       ),

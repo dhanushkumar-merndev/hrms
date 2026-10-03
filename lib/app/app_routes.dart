@@ -8,6 +8,7 @@ import '../features/admin/permissions_screen.dart';
 import '../features/admin/shifts_screen.dart';
 import '../features/admin/teams_screen.dart';
 import '../features/announcements/announcement_screen.dart';
+import '../features/admin/outside_work_screen.dart';
 import '../features/approvals/approval_detail_screen.dart';
 import '../features/approvals/approvals_screen.dart';
 import '../features/archive/archive_job_screen.dart';
@@ -94,10 +95,16 @@ final List<RouteBase> featureRoutes = [
   ),
   AppRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
   AppRoute(path: '/workspace', builder: (_, _) => const WorkspaceScreen()),
-  AppRoute(path: '/approvals', builder: (_, _) => const ApprovalsScreen()),
+  AppRoute(
+    path: '/approvals',
+    builder: (_, s) => ApprovalsScreen(initialScope: s.uri.queryParameters['scope']),
+  ),
   AppRoute(
     path: '/approvals/:id',
-    builder: (_, s) => ApprovalDetailScreen(id: s.pathParameters['id']!),
+    builder: (_, s) => ApprovalDetailScreen(
+      id: s.pathParameters['id']!,
+      summary: (s.extra as Map?)?.cast<String, dynamic>(),
+    ),
   ),
   AppRoute(
     path: '/reports/hours',
@@ -129,8 +136,13 @@ final List<RouteBase> featureRoutes = [
     path: '/admin/organization',
     builder: (_, _) => const OrganizationScreen(),
   ),
-  AppRoute(path: '/admin/teams', builder: (_, _) => const TeamsScreen()),
+  AppRoute(
+    path: '/admin/teams',
+    builder: (_, s) =>
+        TeamsScreen(initialSection: s.uri.queryParameters['section']),
+  ),
   AppRoute(path: '/admin/offices', builder: (_, _) => const OfficesScreen()),
+  AppRoute(path: '/admin/outside-work', builder: (_, _) => const OutsideWorkScreen()),
   AppRoute(path: '/admin/shifts', builder: (_, _) => const ShiftsScreen()),
   AppRoute(
     path: '/admin/leave-policies',

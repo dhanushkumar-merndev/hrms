@@ -77,7 +77,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: AsyncView(
                   value: summary,
                   onRetry: () => ref.invalidate(homeSummaryProvider),
-                  loading: const SkeletonList(items: 5, height: 120),
+                  loading: const HomeSkeleton(),
                   builder: (data) =>
                       _HomeBody(data: data, name: session?.firstName ?? ''),
                 ),
@@ -158,9 +158,10 @@ class _HomeBody extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           _ReviewsCard(pending: pending, unassigned: unassigned),
         ],
-        for (final t in ((extras['admin_tasks'] as List?) ?? const []).map(
-          (e) => (e as Map).cast<String, dynamic>(),
-        )) ...[
+        for (final t in ((extras['admin_tasks'] as List?) ?? const [])
+            .map((e) => (e as Map).cast<String, dynamic>())
+            // The Approvals card above already shows requests with no approver.
+            .where((t) => t['kind'] != 'reviewer_missing')) ...[
           const SizedBox(height: AppSpacing.md),
           ActionRow(
             icon: t['kind'] == 'archive_due'
@@ -287,54 +288,41 @@ class _QuickActions extends StatelessWidget {
                 button: true,
                 label: label.replaceAll('\n', ' '),
                 excludeSemantics: true,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
+                child: Material(
+                  color: AppColors.surface,
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color(0x18263342),
-                        blurRadius: 14,
-                        offset: Offset(0, 6),
-                        spreadRadius: -4,
-                      ),
-                    ],
+                    side: const BorderSide(color: AppColors.border),
                   ),
-                  child: Material(
-                    color: AppColors.surface,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      side: const BorderSide(color: AppColors.border),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: InkWell(
-                      onTap: () => context.push(route),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(4, 10, 4, 11),
-                        child: Column(
-                          children: [
-                            Container(
-                              width: 54,
-                              height: 54,
-                              decoration: BoxDecoration(
-                                color: bg,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              alignment: Alignment.center,
-                              child: Illustration(art, size: 42),
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    onTap: () => context.push(route),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(4, 10, 4, 11),
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 54,
+                            height: 54,
+                            decoration: BoxDecoration(
+                              color: bg,
+                              borderRadius: BorderRadius.circular(16),
                             ),
-                            const SizedBox(height: 7),
-                            Text(
-                              label,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 12.5,
-                                height: 1.15,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.text,
-                              ),
+                            alignment: Alignment.center,
+                            child: Illustration(art, size: 42),
+                          ),
+                          const SizedBox(height: 7),
+                          Text(
+                            label,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              height: 1.15,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.text,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -1189,6 +1177,7 @@ class _PunchActionArea extends StatelessWidget {
     final iconData = switch (blocked) {
       'not_open_yet' => Icons.schedule_rounded,
       'on_leave' => Icons.beach_access_rounded,
+      'outside_work' => Icons.work_outline_rounded,
       'holiday' => Icons.celebration_rounded,
       'weekly_off' => Icons.weekend_rounded,
       'day_off' => Icons.wb_sunny_rounded,
@@ -1230,6 +1219,8 @@ class _PunchActionArea extends StatelessWidget {
 
   static String _reason(String? blocked, Map<String, dynamic>? shift) =>
       switch (blocked) {
+        'outside_work' =>
+          'Outside work today${shift?['outside_reason'] == null ? '' : ' (${shift!['outside_reason']})'}. No check-in needed.',
         'on_leave' => 'You are on approved leave today.',
         'holiday' => 'Happy holiday! No check-in or check-out is needed today.',
         'weekly_off' => 'Today is your weekly off.',
@@ -1306,7 +1297,8 @@ class _ReviewsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       color: AppColors.approvalsCard,
-      onTap: () => context.push('/approvals'),
+      // Nothing assigned to me but some have no approver: open those directly.
+      onTap: () => context.push(pending == 0 && unassigned > 0 ? '/approvals?scope=unassigned' : '/approvals'),
       child: Row(
         children: [
           const Illustration('tile_review_requests', size: 40),

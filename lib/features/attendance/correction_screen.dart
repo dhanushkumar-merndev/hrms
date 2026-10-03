@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
+import '../../core/auth/session_controller.dart';
 import '../../core/time/org_time.dart';
 import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/cards.dart';
@@ -12,6 +13,7 @@ import '../../core/widgets/dialogs.dart';
 import '../home/home_providers.dart';
 import 'attendance_day_screen.dart';
 import 'attendance_screen.dart';
+import 'attendance_ui.dart';
 
 /// S09 — attendance correction (regularization). Proposes an effective
 /// IN/OUT for a scheduled day; original punches are never changed.
@@ -120,7 +122,7 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
         title: 'Submit correction?',
         message: '${OrgTime.date(OrgTime.ymd(_date))}\n'
             'Check in ${_in!.format(context)} · Check out ${_out!.format(context)}${_outNextDay ? ' (next day)' : ''}\n\n'
-            'Your approver will review it. You can edit it until they open it.',
+            '${(ref.read(sessionContextProvider)?.isAdmin ?? false) ? 'As Admin, your correction is applied straight away.' : 'Your approver will review it. You can edit it until they open it.'}',
         confirmLabel: 'Submit');
     if (!ok) return;
     setState(() => _busy = true);
@@ -138,7 +140,7 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
       ref.invalidate(homeSummaryProvider);
       ref.invalidate(myAttendanceProvider);
       if (!mounted) return;
-      showMessage(context, 'Correction submitted.');
+      showMessage(context, res.map['state'] == 'approved' ? 'Correction applied.' : 'Correction submitted.');
       context.pushReplacement('/requests/${res.map['id']}');
     } on ApiException catch (e) {
       setState(() {
@@ -169,7 +171,10 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
                     trailing: const AppIcon(Icons.edit_outlined),
                     onTap: widget.editRequestId == null ? _pickDate : null,
                   ),
-                  if (d != null && d['scheduled'] == true)
+                  if (d != null && const ['holiday', 'weekly_off', 'day_off'].contains(d['status']))
+                    Text('${dayStatus(d).$1}: no work was required on this day. Pick a working day to fix.',
+                        style: const TextStyle(color: AppColors.warning))
+                  else if (d != null && d['scheduled'] == true)
                     Text(
                       'Shift ${OrgTime.time(d['start_at'])} – ${OrgTime.time(d['end_at'])} · recorded: '
                       '${d['effective_in_at'] == null ? 'no punches' : '${OrgTime.time(d['effective_in_at'])} – ${d['effective_out_at'] == null ? 'no check-out' : OrgTime.time(d['effective_out_at'])}'}',
@@ -223,6 +228,7 @@ class _CorrectionScreenState extends ConsumerState<CorrectionScreen> {
                     title: const Text('Check-out is on the next day'),
                     subtitle: const Text('For overnight shifts'),
                   ),
+                  const SizedBox(height: AppSpacing.md),
                   TextField(
                     controller: _reason,
                     maxLength: 1000,
@@ -268,7 +274,7 @@ class _TimeField extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: InputDecorator(
-        decoration: InputDecoration(labelText: label, errorText: error, suffixIcon: const AppIcon(Icons.schedule_rounded)),
+        decoration: InputDecoration(labelText: label, errorText: error, suffixIcon: const AppIcon(Icons.schedule_rounded, size: 20)),
         child: Text(value ?? 'Choose time', style: TextStyle(color: value == null ? AppColors.textSecondary : AppColors.text)),
       ),
     );

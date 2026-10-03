@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/theme.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
+import '../../core/auth/session_controller.dart';
 import '../../core/time/org_time.dart';
 import '../../core/widgets/cards.dart';
 import '../../core/widgets/dialogs.dart';
@@ -179,12 +180,13 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
       return;
     }
     final units = (_preview?['units'] as num?)?.toInt();
+    final isAdmin = ref.read(sessionContextProvider)?.isAdmin ?? false;
     final ok = await confirm(context,
         title: 'Submit leave?',
         message: '${type?['name'] ?? 'Leave'}: ${OrgTime.date(OrgTime.ymd(_start!))}'
             '${_single ? '' : ' – ${OrgTime.date(OrgTime.ymd(_end!))}'}'
             '${units == null ? '' : '\n${daysFromUnits(units)} working day(s)'}\n\n'
-            'You can edit it until your approver opens it.',
+            '${isAdmin ? 'As Admin, your leave is approved straight away. You can revoke it later with a reason.' : 'You can edit it until your approver opens it.'}',
         confirmLabel: 'Submit');
     if (!ok) return;
     setState(() => _busy = true);
@@ -206,7 +208,7 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
       ref.invalidate(myRequestsProvider);
       ref.invalidate(homeSummaryProvider);
       if (!mounted) return;
-      showMessage(context, 'Leave request submitted.');
+      showMessage(context, res.map['state'] == 'approved' ? 'Leave approved.' : 'Leave request submitted.');
       if (widget.editRequestId != null) {
         context.pop();
       } else {
@@ -228,6 +230,8 @@ class _LeaveApplyScreenState extends ConsumerState<LeaveApplyScreen> {
     final types = ref.watch(leaveTypesProvider);
     final balances = ref.watch(leaveBalancesProvider(null)).value;
     final typeList = types.value ?? const [];
+    // Only one leave type on offer: choose it for the user.
+    if (_typeId == null && typeList.length == 1) _typeId = typeList.first['id'] as String?;
     final type = typeList.where((t) => t['id'] == _typeId).firstOrNull;
     final balance = ((balances?['balances'] as List?) ?? const [])
         .cast<Map>()
@@ -438,7 +442,7 @@ class _DateField extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: InputDecorator(
-        decoration: InputDecoration(labelText: label, errorText: error, suffixIcon: const AppIcon(Icons.event_outlined)),
+        decoration: InputDecoration(labelText: label, errorText: error, suffixIcon: const AppIcon(Icons.event_outlined, size: 20)),
         child: Text(date == null ? 'Choose' : OrgTime.date(OrgTime.ymd(date!), pattern: 'd MMM yyyy')),
       ),
     );

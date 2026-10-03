@@ -228,11 +228,34 @@ select test.login('ADMIN01');
 create temporary table s2 as select public.open_request_for_review((res -> 'data' ->> 'id')::uuid) as res from s1;
 select test.eq((select public.decide_request((res -> 'data' ->> 'id')::uuid, 'approve', null, (res ->> 'version')::integer)
                 -> 'data' ->> 'state' from s2), 'approved', 'REVIEW-007 designated other reviewer approves');
--- Admin's own request routes to HR (Management team route).
+-- ADMIN-SELF: Admin's own leave needs no approver and is approved at once.
+select test.as_admin_db();
+create temporary table a0 as select pg_temp.avail('ADMIN01') as v;
+select test.login('ADMIN01');
 create temporary table s3 as select pg_temp.apply(pg_temp.d(15), pg_temp.d(15)) as res;
-select test.eq((select res -> 'data' -> 'reviewer' ->> 'code' from s3), 'HR01', 'Admin''s leave routes to HR');
-select test.throws(format('select public.decide_request(%L, ''approve'', ''x'', 1)', (select res -> 'data' ->> 'id' from s3)),
-  'SELF_APPROVAL_FORBIDDEN', 'Admin cannot approve own leave');
+select test.eq((select res -> 'data' ->> 'state' from s3), 'approved', 'ADMIN-SELF-001 Admin''s leave approved at once');
+select test.eq((select (res -> 'data' ->> 'reviewer_assigned')::boolean from s3), false,
+  'ADMIN-SELF-001 no approver assigned');
+select test.eq((select jsonb_array_length(public.list_review_queue(null, 'unassigned') -> 'data')
+                from (select 1) x), 0, 'ADMIN-SELF-002 nothing left waiting for an approver');
+select test.as_admin_db();
+select test.eq(pg_temp.avail('ADMIN01'), (select v from a0) - 2, 'ADMIN-SELF-001 debited once');
+select test.eq((select count(*)::integer from hrms.notifications where kind = 'setup.reviewer_missing'
+                and data ->> 'request_id' = (select res -> 'data' ->> 'id' from s3)), 0,
+  'ADMIN-SELF-001 no missing-approver alert');
+-- Admin revokes their own approved leave with a reason; it is credited back.
+select test.login('ADMIN01');
+select test.throws(format('select public.request_leave_cancellation(%L, %s, null)',
+  (select res -> 'data' ->> 'id' from s3), (select res ->> 'version' from s3)), 'VALIDATION_FAILED',
+  'ADMIN-SELF-003 revoking needs a reason');
+create temporary table s4 as select public.request_leave_cancellation((res -> 'data' ->> 'id')::uuid,
+  (res ->> 'version')::integer, 'Applied by mistake') as res from s3;
+select test.eq((select res -> 'data' ->> 'state' from s4), 'cancelled', 'ADMIN-SELF-003 revoked immediately');
+select test.eq((select res -> 'data' -> 'events' -> -1 ->> 'reason' from s4), 'Applied by mistake',
+  'ADMIN-SELF-003 reason recorded');
+select test.as_admin_db();
+select test.eq(pg_temp.avail('ADMIN01'), (select v from a0), 'ADMIN-SELF-003 credited back');
+select test.eq(hrms.approved_leave_slots(test.emp('ADMIN01'), pg_temp.d(15)), 0, 'ADMIN-SELF-003 day freed');
 
 -- REVIEW-008: no eligible reviewer -> pending with setup alert, never auto-approved.
 select test.as_admin_db();

@@ -33,6 +33,7 @@ class PayslipsScreen extends ConsumerWidget {
             child: AsyncView(
               value: data,
               onRetry: () => ref.invalidate(myPayslipsProvider),
+              loading: const PayslipsSkeleton(),
               builder: (d) {
                 final slots = ((d['slots'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList();
                 // Only months that have a payslip are listed; the rest are

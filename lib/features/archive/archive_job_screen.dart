@@ -221,6 +221,7 @@ class _ArchiveJobScreenState extends ConsumerState<ArchiveJobScreen> {
                 onChanged: (v) => setState(() => acceptLocal = v ?? false),
                 title: const Text('I keep the saved archive safe. Deleted files can only be restored from it.'),
               ),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: typed,
                 onChanged: (_) => setState(() {}),

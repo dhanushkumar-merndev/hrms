@@ -61,13 +61,20 @@ class PushService {
     return true;
   }
 
+  static const _askedKey = 'hrms.push_asked';
+
   /// Re-binds on sign-in when the user had push turned on for this phone.
+  /// The first time on a phone it asks once (Android permission prompt), so
+  /// approvals and reminders arrive without hunting for the Settings switch.
   static Future<void> restore(ApiClient api) async {
-    if (await isEnabled()) {
-      try {
+    try {
+      if (await isEnabled()) {
         await enable(api);
-      } catch (_) {}
-    }
+      } else if (_ready && await SecureSessionStorage.storage.read(key: _askedKey) == null) {
+        await SecureSessionStorage.storage.write(key: _askedKey, value: 'yes');
+        await enable(api);
+      }
+    } catch (_) {}
   }
 
   static Future<void> disable(ApiClient api) async {

@@ -23,6 +23,7 @@ class PagedList<T> extends StatefulWidget {
     required this.fetch,
     required this.itemBuilder,
     this.empty,
+    this.loading,
     this.header,
     this.padding = const EdgeInsets.all(AppSpacing.page),
     this.separator = AppSpacing.sm,
@@ -31,6 +32,7 @@ class PagedList<T> extends StatefulWidget {
   final Future<PageResult<T>> Function(Object? cursor) fetch;
   final Widget Function(BuildContext context, T item) itemBuilder;
   final Widget? empty;
+  final Widget? loading;
   final Widget? header;
   final EdgeInsets padding;
   final double separator;
@@ -96,7 +98,7 @@ class PagedListState<T> extends State<PagedList<T>> {
   Widget build(BuildContext context) {
     if (_rows.isEmpty) {
       if (_error != null) return ErrorState(error: _error!, onRetry: reload);
-      if (_loading) return const SkeletonList();
+      if (_loading) return widget.loading ?? const SkeletonList();
       return RefreshIndicator(
         onRefresh: reload,
         child: ListView(padding: widget.padding, children: [

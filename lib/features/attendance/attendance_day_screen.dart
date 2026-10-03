@@ -38,6 +38,7 @@ class AttendanceDayScreen extends ConsumerWidget {
       body: AsyncView(
         value: data,
         onRetry: () => ref.invalidate(attendanceDayProvider(key)),
+        loading: const RequestDetailSkeleton(),
         builder: (d) {
           if (d['scheduled'] != true) {
             return const EmptyState(icon: Icons.event_busy_outlined, title: 'No shift scheduled on this day');

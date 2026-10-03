@@ -298,7 +298,7 @@ Future<bool> showSalaryEditor(
                 error: fieldErrors['effective_from'],
                 onChanged: (d) => setState(() => from = d),
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.md),
               TextField(
                 controller: reason,
                 maxLength: 500,

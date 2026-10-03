@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -33,6 +34,7 @@ class JellyNavigationBar extends StatefulWidget {
     this.selectedColor,
     this.unselectedColor,
     this.height = 68.0,
+    this.showTopBorder = true,
   }) : assert(destinations.length >= 2, 'At least 2 destinations are required');
 
   final int selectedIndex;
@@ -43,6 +45,7 @@ class JellyNavigationBar extends StatefulWidget {
   final Color? selectedColor;
   final Color? unselectedColor;
   final double height;
+  final bool showTopBorder;
 
   @override
   State<JellyNavigationBar> createState() => _JellyNavigationBarState();
@@ -135,15 +138,21 @@ class _JellyNavigationBarState extends State<JellyNavigationBar>
   @override
   Widget build(BuildContext context) {
     final navTheme = Theme.of(context).navigationBarTheme;
-    final bgColor = widget.backgroundColor ?? navTheme.backgroundColor ?? AppColors.surface;
-    final pillColor = widget.indicatorColor ?? navTheme.indicatorColor ?? AppColors.attendanceCard;
+    final bgColor =
+        widget.backgroundColor ?? navTheme.backgroundColor ?? AppColors.surface;
+    final pillColor =
+        widget.indicatorColor ??
+        navTheme.indicatorColor ??
+        AppColors.attendanceCard;
     final activeColor = widget.selectedColor ?? AppColors.primary;
     final inactiveColor = widget.unselectedColor ?? AppColors.textSecondary;
 
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
-        border: const Border(top: BorderSide(color: AppColors.border, width: 1.0)),
+        border: widget.showTopBorder
+            ? const Border(top: BorderSide(color: AppColors.border, width: 1.0))
+            : null,
       ),
       child: SafeArea(
         top: false,
@@ -221,9 +230,9 @@ class _JellyPillPainter extends CustomPainter {
     required this.pillColor,
     required this.barHeight,
   }) : _paint = Paint()
-          ..color = pillColor
-          ..isAntiAlias = true
-          ..style = PaintingStyle.fill;
+         ..color = pillColor
+         ..isAntiAlias = true
+         ..style = PaintingStyle.fill;
 
   final double progress;
   final double startFracIndex;
@@ -286,7 +295,8 @@ class _JellyPillPainter extends CustomPainter {
       } else {
         // Impact squash and elastic settling
         final p = (t - 0.65) / 0.35;
-        final impact = -math.sin(p * math.pi * 2) *
+        final impact =
+            -math.sin(p * math.pi * 2) *
             math.exp(-p * 3.2) *
             0.22 *
             math.sqrt(distanceAbs);
@@ -357,59 +367,59 @@ class _JellyNavItem extends StatelessWidget {
           mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-              // Icon container with pill-landing bounce reaction
-              SizedBox(
-                height: 32,
-                width: 64,
-                child: Center(
-                  child: AnimatedBuilder(
-                    animation: animation,
-                    builder: (context, child) {
-                      double scale = 1.0;
-                      if (isSelected && isAnimatingToThis) {
-                        final t = animation.value;
-                        if (t > 0.60) {
-                          final p = (t - 0.60) / 0.40;
-                          // Micro-pop when the jelly pill lands
-                          scale = 1.0 + math.sin(p * math.pi) * 0.16;
-                        }
+            // Icon container with pill-landing bounce reaction
+            SizedBox(
+              height: 32,
+              width: 64,
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: animation,
+                  builder: (context, child) {
+                    double scale = 1.0;
+                    if (isSelected && isAnimatingToThis) {
+                      final t = animation.value;
+                      if (t > 0.60) {
+                        final p = (t - 0.60) / 0.40;
+                        // Micro-pop when the jelly pill lands
+                        scale = 1.0 + math.sin(p * math.pi) * 0.16;
                       }
-                      return Transform.scale(
-                        scale: scale,
-                        child: IconTheme(
-                          data: IconThemeData(
-                            color: isSelected ? activeColor : inactiveColor,
-                            size: 24,
-                          ),
-                          child: isSelected
-                              ? destination.selectedIcon
-                              : destination.icon,
+                    }
+                    return Transform.scale(
+                      scale: scale,
+                      child: IconTheme(
+                        data: IconThemeData(
+                          color: isSelected ? activeColor : inactiveColor,
+                          size: 24,
                         ),
-                      );
-                    },
-                  ),
+                        child: isSelected
+                            ? destination.selectedIcon
+                            : destination.icon,
+                      ),
+                    );
+                  },
                 ),
               ),
-              const SizedBox(height: 4),
-              // Label text
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOutCubic,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected ? activeColor : inactiveColor,
-                  height: 1.2,
-                ),
-                child: Text(
-                  destination.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+            ),
+            const SizedBox(height: 4),
+            // Label text
+            AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? activeColor : inactiveColor,
+                height: 1.2,
               ),
-            ],
-          ),
+              child: Text(
+                destination.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
-      );
+      ),
+    );
   }
 }

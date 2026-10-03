@@ -293,27 +293,38 @@ class _TotalsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final unresolved = (totals['unresolved_days'] as num?)?.toInt() ?? 0;
-    Widget stat(String label, Object? seconds, [Color? color]) => Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
-            // One line per total: long values ("134 h 59 min") shrink instead of wrapping.
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(OrgTime.hm(seconds as num?),
-                  maxLines: 1, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: color)),
-            ),
-          ]),
+    // 2 x 2 tinted tiles: big company totals never squeeze into one line.
+    Widget stat(String label, Object? seconds, Color bg, [Color? color]) => Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: Theme.of(context).textTheme.bodySmall),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(OrgTime.hm(seconds as num?),
+                    maxLines: 1,
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: color ?? AppColors.text)),
+              ),
+            ]),
+          ),
         );
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: SectionCard(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            stat('Expected', totals['required_seconds']),
-            stat('Worked', totals['credited_seconds']),
-            stat('Short', totals['shortfall_seconds'], AppColors.error),
-            stat('Extra', totals['extra_seconds']),
+            stat('Expected', totals['required_seconds'], const Color(0xFFEFF1F4)),
+            const SizedBox(width: AppSpacing.sm),
+            stat('Worked', totals['credited_seconds'], AppColors.successSoft, AppColors.success),
+          ]),
+          const SizedBox(height: AppSpacing.sm),
+          Row(children: [
+            stat('Short', totals['shortfall_seconds'], AppColors.errorSoft, AppColors.error),
+            const SizedBox(width: AppSpacing.sm),
+            stat('Extra', totals['extra_seconds'], AppColors.attendanceCard, AppColors.primary),
           ]),
           if (unresolved > 0) ...[
             const SizedBox(height: AppSpacing.sm),

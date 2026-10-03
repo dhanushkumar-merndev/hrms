@@ -10,7 +10,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/format.dart';
 import '../../core/time/org_time.dart';
-import '../../core/widgets/cards.dart';
+import '../../core/widgets/info_button.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
 import '../../core/widgets/states.dart';
@@ -99,7 +99,17 @@ class _ArchiveRestoreScreenState extends ConsumerState<ArchiveRestoreScreen> {
   Widget build(BuildContext context) {
     final data = ref.watch(_archivedFilesProvider(widget.periodId));
     return Scaffold(
-      appBar: AppBar(title: const Text('Restore archived files')),
+      appBar: AppBar(title: const Text('Restore archived files'), actions: const [
+        Padding(
+          padding: EdgeInsets.only(right: AppSpacing.page),
+          child: InfoButton(
+            size: 40,
+            title: 'Restore archived files',
+            message: 'Choose files, then select a saved archive that contains them.\n\nEach file is accepted only '
+                'if it matches the fingerprint recorded when it was deleted.',
+          ),
+        ),
+      ]),
       body: PermissionGate(
         allowed: (s) => s.isAdmin,
         child: AsyncView(
@@ -108,12 +118,6 @@ class _ArchiveRestoreScreenState extends ConsumerState<ArchiveRestoreScreen> {
           builder: (rows) {
             final open = rows.where((r) => r['restored_version_id'] == null).toList();
             return ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
-              const SectionCard(
-                color: AppColors.attendanceCard,
-                child: Text('Choose files, then select a saved archive that contains them. Each file is accepted only if '
-                    'it matches the fingerprint recorded when it was deleted.'),
-              ),
-              const SizedBox(height: AppSpacing.md),
               if (_status != null) ...[Text(_status!), const SizedBox(height: AppSpacing.md)],
               if (open.isEmpty) const EmptyState(icon: Icons.inventory_2_outlined, title: 'Nothing to restore'),
               for (final r in open)

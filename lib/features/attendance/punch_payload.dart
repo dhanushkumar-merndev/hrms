@@ -60,7 +60,9 @@ class PunchPayload {
 
   String get sha256Hex => sha256.convert(bytes).toString();
 
-  Map<String, Object> toRequest(String signature, {required bool isMocked}) => {
+  Map<String, Object?> toRequest(String signature,
+          {required bool isMocked, String? wifiSsid, List<String> wifiNearby = const []}) =>
+      {
         'operation_key': operationKey,
         'challenge_id': challengeId,
         'nonce': nonce,
@@ -75,5 +77,7 @@ class PunchPayload {
         'sample_at_ms': sampleAtMs,
         'is_mocked': isMocked,
         'signature': signature,
+        'wifi_ssid': wifiSsid,
+        'wifi_nearby': wifiNearby,
       };
 }

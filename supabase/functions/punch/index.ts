@@ -1,7 +1,7 @@
 // POST /punch — submit a signed IN/OUT punch.
 // Body: {operation_key, challenge_id, nonce, action, target_id, device_id,
 //        office_id, employee_id, latitude, longitude, accuracy, sample_at_ms,
-//        is_mocked, signature}
+//        is_mocked, signature, wifi_ssid?, wifi_nearby?}
 // Order (architecture §5.1): record trusted receipt time -> authenticate ->
 // committed-replay lookup (returns the original result before any freshness
 // or signature check) -> verify device signature over the server-rebuilt
@@ -102,6 +102,12 @@ serve(async (req, requestId) => {
     p_integrity: {
       level: device.attestation_level,
       mock_location: b.is_mocked === true,
+      // Connected Wi-Fi name reported by the phone; checked against the office list.
+      wifi_ssid: typeof b.wifi_ssid === "string" ? b.wifi_ssid.slice(0, 64) : null,
+      // Office Wi-Fi names seen nearby in a scan (phone may be on mobile data).
+      wifi_nearby: Array.isArray(b.wifi_nearby)
+        ? b.wifi_nearby.filter((n): n is string => typeof n === "string").slice(0, 30).map((n) => n.slice(0, 64))
+        : [],
       signature_verified: true,
       request_id: requestId,
     },

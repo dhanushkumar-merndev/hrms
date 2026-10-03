@@ -75,6 +75,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   next: rows.length < 30 ? null : (rows.last['created_at'] as String, rows.last['id'] as String));
             },
             empty: const EmptyState(icon: Icons.notifications_none_rounded, title: 'No notifications'),
+            loading: const SkeletonList(items: 6),
             itemBuilder: (context, n) {
               final unread = n['read_at'] == null && !_read.contains(n['id']);
               return Material(

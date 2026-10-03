@@ -101,6 +101,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
               return offsetPage(res.map, offset);
             },
             empty: const EmptyState(icon: Icons.person_search_outlined, title: 'No one matches'),
+            loading: const PeopleSkeleton(),
             itemBuilder: (context, p) => PersonTile(p: p, onTap: () => _showPerson(context, p)),
           ),
         ),
@@ -112,13 +113,29 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     showModalBottomSheet<void>(
       context: context,
       useSafeArea: true,
-      builder: (ctx) => Padding(
+      isScrollControlled: true,
+      builder: (ctx) => SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.xl),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(p['name'] as String? ?? '', style: Theme.of(ctx).textTheme.titleLarge),
-          Text('${p['code']}${p['designation'] != null ? ' · ${p['designation']}' : ''}',
-              style: Theme.of(ctx).textTheme.bodyMedium),
-          const SizedBox(height: AppSpacing.md),
+          Row(children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: AppColors.peopleCard,
+              child: Text(
+                initialsOf(p['name'] as String?),
+                style: const TextStyle(color: AppColors.peopleAction, fontWeight: FontWeight.w700, fontSize: 18),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(p['name'] as String? ?? '', style: Theme.of(ctx).textTheme.titleLarge),
+                Text('${p['code']}${p['designation'] != null ? ' · ${p['designation']}' : ''}',
+                    style: Theme.of(ctx).textTheme.bodyMedium),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: AppSpacing.lg),
           KeyValueRow('Department', ((p['department'] as Map?)?['name'] as String?) ?? '—'),
           KeyValueRow('Team', ((p['team'] as Map?)?['name'] as String?) ?? '—'),
           for (final (label, key) in const [('Work email', 'business_email'), ('Work phone', 'business_phone')])
@@ -154,7 +171,11 @@ class PersonTile extends StatelessWidget {
     final team = (p['team'] as Map?)?['name'] as String?;
     return Material(
       color: AppColors.surface,
-      borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
+        side: const BorderSide(color: AppColors.border),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.rowRadius),
         onTap: onTap,

@@ -22,8 +22,12 @@ import '../requests/request_widgets.dart';
 /// screen never reads request details any other way. Every decision sends
 /// the version it was shown, so a stale view can never approve.
 class ApprovalDetailScreen extends ConsumerStatefulWidget {
-  const ApprovalDetailScreen({super.key, required this.id});
+  const ApprovalDetailScreen({super.key, required this.id, this.summary});
   final String id;
+
+  /// Queue row (no reasons/revisions), when opened from the list. Lets an
+  /// Admin assign an approver without opening (locking) the request.
+  final Map<String, dynamic>? summary;
 
   @override
   ConsumerState<ApprovalDetailScreen> createState() =>
@@ -183,11 +187,21 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
       body: PermissionGate(
         allowed: (s) => s.canReview || s.isAdmin,
         child: _needsFallbackReason
-            ? _FallbackPrompt(busy: _busy, onReason: _open)
+            ? _FallbackPrompt(
+                busy: _busy,
+                onReason: _open,
+                summary: widget.summary,
+                onAssign: widget.summary == null
+                    ? null
+                    : () => _reassign(
+                        (widget.summary!['version'] as num?)?.toInt(),
+                        (widget.summary!['employee'] as Map)['id'] as String,
+                      ),
+              )
             : _error != null
             ? ErrorState(error: _error!, onRetry: () => _open(null))
             : _res == null
-            ? const SkeletonList(items: 3, height: 120)
+            ? const RequestDetailSkeleton()
             : _body(context, _res!, isAdmin),
       ),
     );
@@ -514,27 +528,35 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
 }
 
 class _FallbackPrompt extends StatelessWidget {
-  const _FallbackPrompt({required this.busy, required this.onReason});
+  const _FallbackPrompt({required this.busy, required this.onReason, this.summary, this.onAssign});
   final bool busy;
   final ValueChanged<String?> onReason;
+  final Map<String, dynamic>? summary;
+  final VoidCallback? onAssign;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.page),
       children: [
+        if (summary != null) ...[
+          RequestTile(r: summary!, showEmployee: true, onTap: () {}),
+          const SizedBox(height: AppSpacing.md),
+        ],
         SectionCard(
           color: AppColors.warningSoft,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'You are not the assigned approver',
+                summary?['reviewer_assigned'] == false
+                    ? 'No approver is assigned yet'
+                    : 'You are not the assigned approver',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
               const SizedBox(height: AppSpacing.sm),
               const Text(
-                'As Admin you can review this request as a fallback. Opening it locks the current version '
+                'Assign an approver, or review it yourself as Admin. Reviewing locks the current version '
                 'for editing, and your reason is recorded in the audit history.',
               ),
               const SizedBox(height: AppSpacing.lg),
@@ -551,6 +573,13 @@ class _FallbackPrompt extends StatelessWidget {
                       },
                 child: const Text('Review as Admin'),
               ),
+              if (onAssign != null) ...[
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton(
+                  onPressed: busy ? null : onAssign,
+                  child: const Text('Assign an approver'),
+                ),
+              ],
             ],
           ),
         ),

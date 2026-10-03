@@ -80,6 +80,11 @@ ThemeData buildTheme() {
     useMaterial3: true,
     colorScheme: scheme,
     scaffoldBackgroundColor: AppColors.background,
+    // No grey press/ripple overlay anywhere in the app.
+    splashFactory: NoSplash.splashFactory,
+    splashColor: Colors.transparent,
+    highlightColor: Colors.transparent,
+    hoverColor: Colors.transparent,
     textTheme: text,
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.surface,
@@ -156,7 +161,11 @@ ThemeData buildTheme() {
     ),
     // Dialogs and sheets on plain white (no lavender tint) so controls and
     // fields inside them keep their contrast.
-    dialogTheme: const DialogThemeData(backgroundColor: AppColors.surface, surfaceTintColor: Colors.transparent),
+    dialogTheme: DialogThemeData(
+      backgroundColor: AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.cardRadius)),
+    ),
     timePickerTheme: const TimePickerThemeData(backgroundColor: AppColors.surface),
     datePickerTheme: const DatePickerThemeData(
       backgroundColor: AppColors.surface,

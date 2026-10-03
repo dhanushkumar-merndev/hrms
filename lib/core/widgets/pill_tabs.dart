@@ -37,8 +37,7 @@ class PillTabs<T> extends StatelessWidget {
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(999),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x1A263342), blurRadius: 8, offset: Offset(0, 2)),
-                  BoxShadow(color: Color(0x0D263342), blurRadius: 1, offset: Offset(0, 0.5)),
+                  BoxShadow(color: Color(0x14263342), blurRadius: 4, offset: Offset.zero),
                 ],
               ),
             ),

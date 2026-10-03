@@ -6,7 +6,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_exception.dart';
 import '../../core/format.dart';
 import '../../core/widgets/app_icon.dart';
-import '../../core/widgets/cards.dart';
+import '../../core/widgets/info_button.dart';
 import '../../core/widgets/dialogs.dart';
 import '../../core/widgets/permission_gate.dart';
 import '../../core/widgets/states.dart';
@@ -95,18 +95,21 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
                   (e['code'] as String).toLowerCase().startsWith(q);
             }).toList();
             return ListView(padding: const EdgeInsets.all(AppSpacing.page), children: [
-              SectionCard(
-                color: AppColors.attendanceCard,
-                child: Text('Manager: team reports and approvals. HR: employee records, policies, organisation reports and '
-                    'approvals. Payroll and medical documents always need their own permission. Admin: everything. '
-                    'A Manager role is also given automatically when someone is made a team manager.',
-                    style: Theme.of(context).textTheme.bodyMedium),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextField(
-                decoration: const InputDecoration(prefixIcon: AppIcon(Icons.search_rounded), hintText: 'Search people'),
-                onChanged: (v) => setState(() => _query = v.trim()),
-              ),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    decoration: const InputDecoration(prefixIcon: AppIcon(Icons.search_rounded), hintText: 'Search people'),
+                    onChanged: (v) => setState(() => _query = v.trim()),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                const InfoButton(
+                  title: 'Roles & permissions',
+                  message: 'Manager: team reports and approvals.\n\nHR: employee records, policies, organisation reports '
+                      'and approvals.\n\nPayroll and medical documents always need their own permission.\n\n'
+                      'Admin: everything.\n\nA Manager role is also given automatically when someone is made a team manager.',
+                ),
+              ]),
               const SizedBox(height: AppSpacing.md),
               for (final r in filtered) _PersonAccess(row: r, busy: _busy, onChange: _change),
             ]);
