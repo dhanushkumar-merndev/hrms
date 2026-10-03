@@ -90,8 +90,9 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       showMessage(context, e.message, error: true);
-      if (e.code == 'STALE_VERSION' || e.code == 'REQUEST_LOCKED')
+      if (e.code == 'STALE_VERSION' || e.code == 'REQUEST_LOCKED') {
         await _open(null);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -528,7 +529,12 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
 }
 
 class _FallbackPrompt extends StatelessWidget {
-  const _FallbackPrompt({required this.busy, required this.onReason, this.summary, this.onAssign});
+  const _FallbackPrompt({
+    required this.busy,
+    required this.onReason,
+    this.summary,
+    this.onAssign,
+  });
   final bool busy;
   final ValueChanged<String?> onReason;
   final Map<String, dynamic>? summary;

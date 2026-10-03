@@ -44,8 +44,9 @@ class _EmployeeSalarySectionState extends ConsumerState<EmployeeSalarySection> {
     super.initState();
     _lifecycle = AppLifecycleListener(
       onHide: () {
-        if (!_confirming && _data != null && mounted)
+        if (!_confirming && _data != null && mounted) {
           setState(() => _data = null);
+        }
       },
     );
   }

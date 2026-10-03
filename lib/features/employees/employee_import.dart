@@ -165,8 +165,9 @@ ImportPlan planImport(
     } else if (!seen.add(code)) {
       r.errors.add('Employee ID $code appears more than once in the file');
     }
-    if (r.role == null)
+    if (r.role == null) {
       r.errors.add('Role must be Member, Manager, HR or Admin');
+    }
 
     // Salary columns (any filled -> salary update).
     final salaryText = (values['salary'] ?? '').replaceAll(
@@ -210,9 +211,12 @@ ImportPlan planImport(
     r.existing = current;
     if (current == null) {
       // New employee.
-      if (!canProvision) r.errors.add('You cannot create employees');
-      if ((values['name'] ?? '').isEmpty)
+      if (!canProvision) {
+        r.errors.add('You cannot create employees');
+      }
+      if ((values['name'] ?? '').isEmpty) {
         r.errors.add('Full name is required for a new employee');
+      }
       final join = SpreadsheetReader.date(values['join_date'] ?? '');
       if (join == null) {
         r.errors.add(
@@ -223,8 +227,9 @@ ImportPlan planImport(
       } else {
         values['join_date'] = join;
       }
-      if ((r.role == 'hr' || r.role == 'admin') && !isAdmin)
+      if ((r.role == 'hr' || r.role == 'admin') && !isAdmin) {
         r.errors.add('Only an Admin can create HR or Admin accounts');
+      }
       String? resolve(
         String key,
         String label,
@@ -233,12 +238,14 @@ ImportPlan planImport(
       }) {
         final raw = values[key] ?? '';
         if (raw.isEmpty) {
-          if (items.length == 1)
+          if (items.length == 1) {
             return items.single['id'] as String; // the only one
-          if (required)
+          }
+          if (required) {
             r.errors.add(
               '$label is required (${items.map((i) => i['name']).join(', ')})',
             );
+          }
           return null;
         }
         final id = lookup(items, raw);
@@ -253,13 +260,14 @@ ImportPlan planImport(
       r.teamId = resolve('team', 'team', teams, required: true);
       r.officeId = resolve('office', 'office', offices, required: true);
       r.shiftId = resolve('shift', 'shift', shifts, required: true);
-      if ((values['department'] ?? '').isNotEmpty)
+      if ((values['department'] ?? '').isNotEmpty) {
         r.departmentId = resolve(
           'department',
           'department',
           departments,
           required: false,
         );
+      }
       if (r.errors.isEmpty) {
         r.kind = ImportKind.create;
         r.changes.add(
@@ -338,10 +346,11 @@ ImportPlan planImport(
           );
         }
       }
-      if (r.errors.isEmpty)
+      if (r.errors.isEmpty) {
         r.kind = (r.patch.isEmpty && r.salary.isEmpty)
             ? ImportKind.unchanged
             : ImportKind.update;
+      }
     }
     if (r.errors.isNotEmpty) r.kind = ImportKind.error;
   }
