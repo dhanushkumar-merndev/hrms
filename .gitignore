@@ -55,6 +55,7 @@ test_output/
 .kotlin/
 
 # IDE / OS
+.worktrees/
 .idea/
 *.iml
 .vscode/
