@@ -41,10 +41,10 @@ select test.eq((select res -> 'data' ->> 'state' from r1), 'submitted', 'LEAVE-0
 select test.eq((select (res -> 'data' ->> 'units')::integer from r1), 4, 'LEAVE-001 two full days = 4 units');
 select test.eq((select (res -> 'data' ->> 'reserved_units')::integer from r1), 4, 'LEAVE-001 4 units reserved');
 select test.eq(pg_temp.avail('EMP01'), 20, 'LEAVE-001 available 24 - 4 reserved = 20');
-select test.eq((select res -> 'data' -> 'reviewer' ->> 'code' from r1), 'MGR01', 'routed to Team1 manager');
+select test.eq((select res -> 'data' -> 'reviewer' ->> 'code' from r1), 'HR01', 'routed to active HR');
 
 -- REVIEW-001: reviewer listing never locks.
-select test.login('MGR01');
+select test.login('HR01');
 select test.eq((select jsonb_array_length(public.list_review_queue() -> 'data')), 1, 'REVIEW-001 queue shows request');
 select test.ok((select not ((public.list_review_queue() -> 'data' -> 0) ? 'revisions')),
   'REVIEW-011 queue projection has no revisions/reason');
@@ -80,7 +80,7 @@ select test.eq((select state from hrms.requests where id = (select (res -> 'data
   'REVIEW-004 unauthorised/owner reads did not lock');
 
 -- REVIEW-002: reviewer opens -> locks the latest revision; owner edit fails.
-select test.login('MGR01');
+select test.login('HR01');
 create temporary table o1 as select public.open_request_for_review((res -> 'data' ->> 'id')::uuid) as res from r1;
 select test.eq((select res -> 'data' ->> 'state' from o1), 'under_review', 'REVIEW-002 open locks request');
 select test.eq((select (res -> 'data' ->> 'locked_revision')::integer from o1), 2, 'REVIEW-002 latest revision locked');
@@ -91,7 +91,7 @@ select test.throws(format('select public.save_leave_request(%L, %L, %L, %L, ''FU
   'REQUEST_LOCKED', 'REVIEW-002 owner edit after open gets REQUEST_LOCKED');
 
 -- REVIEW-006: one winner for concurrent decisions on the same version.
-select test.login('MGR01');
+select test.login('HR01');
 select test.throws(format('select public.decide_request(%L, ''reject'', null, %s)',
   (select res -> 'data' ->> 'id' from o1), (select res ->> 'version' from o1)), 'VALIDATION_FAILED',
   'REVIEW-010 rejection requires a reason');
@@ -116,7 +116,7 @@ select test.login('EMP01');
 create temporary table c1 as select public.request_leave_cancellation((res -> 'data' ->> 'id')::uuid,
   (res ->> 'version')::integer, 'Plans changed') as res from d1;
 select test.eq(pg_temp.avail('EMP01'), 18, 'LEAVE-009 pending cancellation still occupies leave');
-select test.login('MGR01');
+select test.login('HR01');
 create temporary table c2 as select public.resolve_cancellation((res -> 'data' ->> 'id')::uuid, false, 'Busy week',
   (res ->> 'version')::integer) as res from c1;
 select test.eq((select res -> 'data' ->> 'state' from c2), 'approved', 'LEAVE-009 declined cancellation restores Approved');
@@ -124,7 +124,7 @@ select test.eq(pg_temp.avail('EMP01'), 18, 'LEAVE-009 decline changes no balance
 select test.login('EMP01');
 create temporary table c3 as select public.request_leave_cancellation((res -> 'data' ->> 'id')::uuid,
   (res ->> 'version')::integer, 'Plans changed again') as res from c2;
-select test.login('MGR01');
+select test.login('HR01');
 create temporary table c4 as select public.resolve_cancellation((res -> 'data' ->> 'id')::uuid, true, null,
   (res ->> 'version')::integer) as res from c3;
 select test.eq((select res -> 'data' ->> 'state' from c4), 'cancelled', 'LEAVE-009 accepted cancellation');
@@ -169,7 +169,7 @@ create temporary table h1 as select pg_temp.apply(pg_temp.d(30), pg_temp.d(34)) 
 select test.eq((select (res -> 'data' ->> 'units')::integer from h1), 4, 'LEAVE-002 Wed+Thu counted; holiday and weekend excluded');
 
 -- ============================================================ return / resubmit (LEAVE-011)
-select test.login('MGR01');
+select test.login('HR01');
 create temporary table o2 as select public.open_request_for_review((res -> 'data' ->> 'id')::uuid) as res from h1;
 create temporary table ret as select public.decide_request((res -> 'data' ->> 'id')::uuid, 'return', 'Pick other dates',
   (res ->> 'version')::integer) as res from o2;
@@ -201,13 +201,13 @@ select test.eq((select current_revision from hrms.requests where id = (select (r
 select test.eq(pg_temp.avail('EMP02'), 2, 'LEAVE-012 failed edit kept reservation');
 
 -- ============================================================ REVIEW-013 withdrawal
-select test.login('MGR01');
+select test.login('HR01');
 create temporary table o3 as select public.open_request_for_review((res -> 'data' ->> 'id')::uuid) as res from resub;
 select test.login('EMP02');
 create temporary table w1 as select public.withdraw_request((res -> 'data' ->> 'id')::uuid, (res ->> 'version')::integer,
   'No longer needed') as res from o3;
 select test.eq((select res -> 'data' ->> 'state' from w1), 'withdrawal_pending', 'REVIEW-013 withdrawal pending during review');
-select test.login('MGR01');
+select test.login('HR01');
 select test.throws(format('select public.decide_request(%L, ''approve'', null, %s)', (select res -> 'data' ->> 'id' from w1),
   (select res ->> 'version' from w1)), 'STALE_VERSION', 'REVIEW-013 approve blocked while withdrawal pending');
 create temporary table w2 as select public.resolve_withdrawal((res -> 'data' ->> 'id')::uuid, true, null,
@@ -218,13 +218,13 @@ select test.eq(pg_temp.avail('EMP02'), 4, 'REVIEW-013 reservation released once 
 -- ============================================================ REVIEW-007 self approval
 select test.login('HR01');
 create temporary table s1 as select pg_temp.apply(pg_temp.d(14), pg_temp.d(14)) as res;
-select test.eq((select res -> 'data' -> 'reviewer' ->> 'code' from s1), 'ADMIN01',
-  'REVIEW-007 HR''s own leave routes to the non-self fallback');
+select test.eq((select res -> 'data' -> 'reviewer' ->> 'code' from s1), 'HR02',
+  'REVIEW-007 HR''s own leave routes to another eligible HR');
 select test.throws(format('select public.open_request_for_review(%L)', (select res -> 'data' ->> 'id' from s1)),
   'ACCESS_DENIED', 'REVIEW-007 HR cannot open own request as reviewer');
 select test.throws(format('select public.decide_request(%L, ''approve'', null, 1)', (select res -> 'data' ->> 'id' from s1)),
   'SELF_APPROVAL_FORBIDDEN', 'REVIEW-007 direct self-approval denied');
-select test.login('ADMIN01');
+select test.login('HR02');
 create temporary table s2 as select public.open_request_for_review((res -> 'data' ->> 'id')::uuid) as res from s1;
 select test.eq((select public.decide_request((res -> 'data' ->> 'id')::uuid, 'approve', null, (res ->> 'version')::integer)
                 -> 'data' ->> 'state' from s2), 'approved', 'REVIEW-007 designated other reviewer approves');
@@ -257,17 +257,20 @@ select test.as_admin_db();
 select test.eq(pg_temp.avail('ADMIN01'), (select v from a0), 'ADMIN-SELF-003 credited back');
 select test.eq(hrms.approved_leave_slots(test.emp('ADMIN01'), pg_temp.d(15)), 0, 'ADMIN-SELF-003 day freed');
 
--- REVIEW-008: no eligible reviewer -> pending with setup alert, never auto-approved.
+-- REVIEW-008: no eligible HR/Admin -> pending; a later Admin can claim it.
 select test.as_admin_db();
-update hrms.approval_routes set fallback_reviewer_id = null where team_id = (select id from hrms.teams where name = 'Team2');
-update hrms.team_managers set effective_to = current_date where team_id = (select id from hrms.teams where name = 'Team2');
+update hrms.role_grants set revoked_at = now()
+where employee_id in (test.emp('HR01'), test.emp('HR02'), test.emp('ADMIN01'))
+  and role in ('hr', 'admin') and revoked_at is null;
 select test.login('EMP03');
 create temporary table n1 as select pg_temp.apply(pg_temp.d(16), pg_temp.d(16)) as res;
 select test.eq((select res -> 'data' ->> 'state' from n1), 'submitted', 'REVIEW-008 stays pending without approver');
 select test.eq((select (res -> 'data' ->> 'reviewer_assigned')::boolean from n1), false, 'REVIEW-008 no reviewer assigned');
 select test.as_admin_db();
-select test.ok((select count(*) >= 1 from hrms.notifications where kind = 'setup.reviewer_missing'
-                and recipient_id = test.emp('ADMIN01')), 'REVIEW-008 Admin gets setup alert');
+insert into hrms.role_grants (org_id, employee_id, role, effective_from)
+values
+  (test.org('TEST_ORG'), test.emp('HR01'), 'hr', now()),
+  (test.org('TEST_ORG'), test.emp('ADMIN01'), 'admin', now());
 select test.login('ADMIN01');
 create temporary table n2 as select public.reassign_request((res -> 'data' ->> 'id')::uuid, test.emp('HR01'), 'Team2 manager left',
   (res ->> 'version')::integer) as res from n1;

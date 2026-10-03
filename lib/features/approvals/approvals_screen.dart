@@ -46,7 +46,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
   late String _scope = const ['mine', 'unassigned', 'all'].contains(widget.initialScope) ? widget.initialScope! : 'mine';
   int _generation = 0;
 
-  Future<void> _openFilters(bool isAdmin) async {
+  Future<void> _openFilters(bool isAdmin, bool canUsePool) async {
     final picked = await showFilterSheet(
       context,
       groups: [
@@ -56,10 +56,10 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
           value: _state,
           defaultValue: null,
         ),
-        if (isAdmin)
+        if (canUsePool)
           FilterGroup(
             title: 'Whose requests',
-            options: _scopes,
+            options: isAdmin ? _scopes : _scopes.take(2).toList(),
             value: _scope,
             defaultValue: 'mine',
           ),
@@ -68,13 +68,15 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
     if (picked == null) return;
     setState(() {
       _state = picked[0] as String?;
-      if (isAdmin) _scope = picked[1] as String;
+      if (canUsePool) _scope = picked[1] as String;
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(sessionContextProvider)?.isAdmin ?? false;
+    final session = ref.watch(sessionContextProvider);
+    final isAdmin = session?.isAdmin ?? false;
+    final canUsePool = isAdmin || (session?.isHr ?? false);
     final api = ref.read(apiProvider);
     return Scaffold(
       appBar: AppBar(
@@ -82,7 +84,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
         actions: [
           FilterButton(
             activeCount: (_state != null ? 1 : 0) + (_scope != 'mine' ? 1 : 0),
-            onPressed: () => _openFilters(isAdmin),
+            onPressed: () => _openFilters(isAdmin, canUsePool),
           ),
           const SizedBox(width: AppSpacing.xs),
         ],
@@ -105,6 +107,12 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                   ('leave', 'Leave'),
                   ('correction', 'Corrections'),
                   ('bank_details', 'Bank'),
+                  ('profile_details', 'Profile'),
+                  ('employee_details', 'Employee'),
+                  ('employee_assignment', 'Assignment'),
+                  ('employee_status', 'Status'),
+                  ('salary_change', 'Salary'),
+                  ('payslip_publish', 'Payslips'),
                 ],
                 value: _kind,
                 onChanged: (v) => setState(() => _kind = v),

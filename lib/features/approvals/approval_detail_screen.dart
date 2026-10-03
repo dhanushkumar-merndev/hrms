@@ -182,7 +182,9 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = ref.watch(sessionContextProvider)?.isAdmin ?? false;
+    final session = ref.watch(sessionContextProvider);
+    final isAdmin = session?.isAdmin ?? false;
+    final canApproveLeave = isAdmin || (session?.isHr ?? false);
     return Scaffold(
       appBar: AppBar(title: const Text('Review request')),
       body: PermissionGate(
@@ -203,12 +205,17 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
             ? ErrorState(error: _error!, onRetry: () => _open(null))
             : _res == null
             ? const RequestDetailSkeleton()
-            : _body(context, _res!, isAdmin),
+            : _body(context, _res!, isAdmin, canApproveLeave),
       ),
     );
   }
 
-  Widget _body(BuildContext context, ApiResult res, bool isAdmin) {
+  Widget _body(
+    BuildContext context,
+    ApiResult res,
+    bool isAdmin,
+    bool canApproveLeave,
+  ) {
     final r = res.map;
     final version = res.version;
     final state = r['state'] as String;
@@ -381,6 +388,7 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
           employee['id'] as String,
           isAdmin,
           conflicts,
+          kind != 'leave' || canApproveLeave,
         ),
       ],
     );
@@ -393,10 +401,22 @@ class _ApprovalDetailScreenState extends ConsumerState<ApprovalDetailScreen> {
     String employeeId,
     bool isAdmin,
     int conflicts,
+    bool mayDecide,
   ) {
     final gap = const SizedBox(height: AppSpacing.sm);
     final out = <Widget>[];
-    if (state == 'under_review') {
+    if (!mayDecide && const {
+      'under_review',
+      'withdrawal_pending',
+      'cancellation_pending',
+    }.contains(state)) {
+      out.add(
+        Text(
+          'Only HR or Admin can approve, return or reject leave.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    } else if (state == 'under_review') {
       out.addAll([
         FilledButton.icon(
           onPressed: _busy || conflicts > 0

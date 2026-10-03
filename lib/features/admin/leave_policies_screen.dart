@@ -358,11 +358,12 @@ class _RoutesTab extends ConsumerWidget {
   const _RoutesTab();
 
   Future<void> _edit(BuildContext context, WidgetRef ref, Map<String, dynamic> team, Map<String, dynamic> route) async {
-    var mode = (route['mode'] as String?) ?? 'manager';
+    final isLeave = route['kind'] == 'leave';
+    var mode = isLeave ? 'hr' : ((route['mode'] as String?) ?? 'manager');
     Map<String, dynamic>? hr = (route['hr_reviewer'] as Map?)?.cast<String, dynamic>();
     Map<String, dynamic>? fallback = (route['fallback'] as Map?)?.cast<String, dynamic>();
     final reason = TextEditingController();
-    final kind = route['kind'] == 'leave' ? 'leave' : 'attendance correction';
+    final kind = isLeave ? 'leave' : 'attendance correction';
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setState) {
@@ -371,17 +372,23 @@ class _RoutesTab extends ConsumerWidget {
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               PillTabs<String>(
-                options: const [('manager', 'Team manager'), ('hr', 'HR person')],
+                options: isLeave
+                    ? const [('hr', 'HR / Admin')]
+                    : const [('manager', 'Team manager'), ('hr', 'HR / Admin')],
                 value: mode,
                 onChanged: (v) => setState(() => mode = v),
               ),
               const SizedBox(height: AppSpacing.md),
               if (mode == 'hr')
                 PickerField(
-                  label: 'HR approver',
+                  label: 'HR / Admin approver',
                   value: hr == null ? null : '${hr!['name']} (${hr!['code']})',
                   onTap: () async {
-                    final p = await pickEmployee(ctx, title: 'HR approver', source: 'reviewers');
+                    final p = await pickEmployee(
+                      ctx,
+                      title: 'HR / Admin approver',
+                      source: 'hr_admin_reviewers',
+                    );
                     if (p != null) setState(() => hr = p);
                   },
                 ),
@@ -390,12 +397,18 @@ class _RoutesTab extends ConsumerWidget {
                 label: 'Fallback approver',
                 value: fallback == null ? null : '${fallback!['name']} (${fallback!['code']})',
                 onTap: () async {
-                  final p = await pickEmployee(ctx, title: 'Fallback approver', source: 'reviewers');
+                  final p = await pickEmployee(
+                    ctx,
+                    title: 'Fallback approver',
+                    source: isLeave ? 'hr_admin_reviewers' : 'reviewers',
+                  );
                   if (p != null) setState(() => fallback = p);
                 },
               ),
               const SizedBox(height: AppSpacing.xs),
-              Text('Used when the main approver is the requester or unavailable. Nobody approves their own request.',
+              Text(isLeave
+                  ? 'Only HR or Admin can approve leave. The fallback must also be HR or Admin. Nobody approves their own request.'
+                  : 'Used when the main approver is the requester or unavailable. Nobody approves their own request.',
                   style: Theme.of(ctx).textTheme.bodySmall),
               TextField(controller: reason, maxLength: 500, decoration: const InputDecoration(labelText: 'Reason')),
               Text('Requests already submitted keep their current approver.', style: Theme.of(ctx).textTheme.bodySmall),
@@ -447,7 +460,11 @@ class _RoutesTab extends ConsumerWidget {
                     subtitle: Text(r['route_id'] == null
                         ? 'Not set — requests will wait for an approver'
                         : [
-                            r['mode'] == 'hr' ? 'HR: ${(r['hr_reviewer'] as Map?)?['name'] ?? '—'}' : 'Team manager',
+                            r['kind'] == 'leave'
+                                ? 'HR / Admin: ${(r['hr_reviewer'] as Map?)?['name'] ?? 'automatic pool'}'
+                                : r['mode'] == 'hr'
+                                    ? 'HR / Admin: ${(r['hr_reviewer'] as Map?)?['name'] ?? '—'}'
+                                    : 'Team manager',
                             'fallback: ${(r['fallback'] as Map?)?['name'] ?? 'none'}',
                           ].join(' · ')),
                     trailing: r['route_id'] == null

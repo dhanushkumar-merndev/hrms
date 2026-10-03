@@ -105,8 +105,9 @@ class _PermissionsScreenState extends ConsumerState<PermissionsScreen> {
                 const SizedBox(width: AppSpacing.sm),
                 const InfoButton(
                   title: 'Roles & permissions',
-                  message: 'Manager: team reports and approvals.\n\nHR: employee records, policies, organisation reports '
-                      'and approvals.\n\nPayroll and medical documents always need their own permission.\n\n'
+                  message: 'Manager: team reports and attendance-correction approvals. Managers cannot approve leave.\n\n'
+                      'HR: employee records, policies, organisation reports and leave/employee approvals.\n\n'
+                      'Payroll and medical documents always need their own permission.\n\n'
                       'Admin: everything.\n\nA Manager role is also given automatically when someone is made a team manager.',
                 ),
               ]),

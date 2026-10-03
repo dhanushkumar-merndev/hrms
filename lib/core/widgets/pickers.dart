@@ -212,13 +212,18 @@ class _EmployeePickerState extends ConsumerState<_EmployeePicker> {
     final q = _query.text.trim();
     try {
       List<Map<String, dynamic>> rows;
-      if (widget.source == 'reviewers') {
+      if (widget.source == 'reviewers' || widget.source == 'hr_admin_reviewers') {
         _all ??= (await ref.read(apiProvider).rpc('list_reviewer_candidates')).list;
         final lower = q.toLowerCase();
         rows = _all!
-            .where((e) => q.isEmpty ||
-                (e['name'] as String).toLowerCase().contains(lower) ||
-                (e['code'] as String).toLowerCase().startsWith(lower))
+            .where((e) {
+              final roles = ((e['roles'] as List?) ?? const []).cast<String>();
+              final eligible = widget.source != 'hr_admin_reviewers' ||
+                  roles.contains('hr') || roles.contains('admin');
+              return eligible && (q.isEmpty ||
+                  (e['name'] as String).toLowerCase().contains(lower) ||
+                  (e['code'] as String).toLowerCase().startsWith(lower));
+            })
             .toList();
       } else {
         final res = await ref.read(apiProvider).rpc('list_employees', {

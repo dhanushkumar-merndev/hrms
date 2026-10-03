@@ -280,6 +280,48 @@ void main() {
     },
   );
 
+  testWidgets('only HR and Admin can open the unassigned reviewer pool', (
+    tester,
+  ) async {
+    final managerApi = await pumpScreen(
+      tester,
+      const ApprovalsScreen(),
+      session: testSession(
+        roles: ['manager'],
+        permissions: ['approvals.review'],
+      ),
+      handler: (fn, _) => fn == 'list_review_queue' ? const [] : null,
+    );
+    await tester.tap(find.byTooltip('Filter'));
+    await tester.pumpAndSettle();
+    expect(find.text('No approver'), findsNothing);
+    expect(find.text('Everyone'), findsNothing);
+    expect(managerApi.calls.last.$2?['p_scope'], 'mine');
+    await tester.tap(find.text('Show results'));
+    await tester.pumpAndSettle();
+    await unmount(tester);
+
+    final hrApi = await pumpScreen(
+      tester,
+      const ApprovalsScreen(),
+      session: testSession(
+        roles: ['hr'],
+        permissions: ['approvals.review'],
+      ),
+      handler: (fn, _) => fn == 'list_review_queue' ? const [] : null,
+    );
+    await tester.tap(find.byTooltip('Filter'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, 'No approver'));
+    await tester.tap(find.text('Show results'));
+    await tester.pumpAndSettle();
+    expect(
+      hrApi.calls.lastWhere((call) => call.$1 == 'list_review_queue').$2?['p_scope'],
+      'unassigned',
+    );
+    await unmount(tester);
+  });
+
   testWidgets(
     'request history filters expose completed owner and reviewer records',
     (tester) async {
@@ -352,7 +394,7 @@ void main() {
     );
     final scopeCardInsets = scopeCardSpacing.padding.resolve(TextDirection.ltr);
     expect(scopeCardInsets.top, AppSpacing.xl);
-    expect(scopeCardInsets.bottom, AppSpacing.xl);
+    expect(scopeCardInsets.bottom, AppSpacing.md);
     final actionList = tester.widget<ListView>(
       find.byKey(const Key('action-list')),
     );

@@ -283,7 +283,7 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
                   AppSpacing.page,
                   AppSpacing.xl,
                   AppSpacing.page,
-                  AppSpacing.xl,
+                  AppSpacing.md,
                 ),
                 child: _CompactCategoryBar(
                   options: [for (final scope in scopes) (scope.$2, scope.$3)],
@@ -308,7 +308,7 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
                   key: const Key('action-list'),
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.page,
-                    AppSpacing.xl,
+                    AppSpacing.md,
                     AppSpacing.page,
                     AppSpacing.xl,
                   ),
