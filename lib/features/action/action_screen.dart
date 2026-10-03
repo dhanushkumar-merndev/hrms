@@ -278,11 +278,12 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
             const OfflineBanner(),
             if (scopes.length > 1) ...[
               Padding(
+                key: const Key('action-scope-card-spacing'),
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.page,
-                  AppSpacing.sm,
+                  AppSpacing.lg,
                   AppSpacing.page,
-                  AppSpacing.sm,
+                  AppSpacing.lg,
                 ),
                 child: _CompactCategoryBar(
                   options: [for (final scope in scopes) (scope.$2, scope.$3)],

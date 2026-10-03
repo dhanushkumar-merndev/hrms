@@ -347,6 +347,12 @@ void main() {
     expect(find.text('HR'), findsOneWidget);
     expect(find.text('Admin'), findsOneWidget);
     expect(find.byType(Divider), findsWidgets);
+    final scopeCardSpacing = tester.widget<Padding>(
+      find.byKey(const Key('action-scope-card-spacing')),
+    );
+    final scopeCardInsets = scopeCardSpacing.padding.resolve(TextDirection.ltr);
+    expect(scopeCardInsets.top, greaterThanOrEqualTo(AppSpacing.lg));
+    expect(scopeCardInsets.bottom, greaterThanOrEqualTo(AppSpacing.lg));
     final actionList = tester.widget<ListView>(
       find.byKey(const Key('action-list')),
     );
