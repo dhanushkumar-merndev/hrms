@@ -14,6 +14,7 @@ import '../../core/device/device_key.dart';
 import '../../core/location/location_service.dart';
 import '../home/home_providers.dart';
 import 'punch_payload.dart';
+import 'wifi_evidence.dart';
 
 enum PunchPhase {
   checking,
@@ -41,6 +42,7 @@ class PunchState {
     this.sample,
     this.distance,
     this.result,
+    this.wifiEvidence,
     this.retryable = true,
     this.biometricRequired = true,
   });
@@ -52,10 +54,12 @@ class PunchState {
   final Position? sample;
   final double? distance;
   final Map<String, dynamic>? result;
+  final WifiEvidence? wifiEvidence;
   final bool retryable;
   final bool biometricRequired;
 
-  Map<String, dynamic>? get office => (shift?['office'] as Map?)?.cast<String, dynamic>();
+  Map<String, dynamic>? get office =>
+      (shift?['office'] as Map?)?.cast<String, dynamic>();
 
   PunchState copy({
     PunchPhase? phase,
@@ -63,19 +67,20 @@ class PunchState {
     Position? sample,
     double? distance,
     Map<String, dynamic>? result,
+    WifiEvidence? wifiEvidence,
     bool? retryable,
-  }) =>
-      PunchState(
-        phase ?? this.phase,
-        message: message,
-        shift: shift,
-        action: action,
-        sample: sample ?? this.sample,
-        distance: distance ?? this.distance,
-        result: result ?? this.result,
-        retryable: retryable ?? this.retryable,
-        biometricRequired: biometricRequired,
-      );
+  }) => PunchState(
+    phase ?? this.phase,
+    message: message,
+    shift: shift,
+    action: action,
+    sample: sample ?? this.sample,
+    distance: distance ?? this.distance,
+    result: result ?? this.result,
+    wifiEvidence: wifiEvidence ?? this.wifiEvidence,
+    retryable: retryable ?? this.retryable,
+    biometricRequired: biometricRequired,
+  );
 }
 
 /// S04 punch flow. The UI only ever shows success after the server commit.
@@ -104,44 +109,79 @@ class PunchController extends Notifier<PunchState> {
       final org = (summary['org'] as Map).cast<String, dynamic>();
       final biometric = org['require_biometric_punch'] != false;
       if (shift == null || action == null) {
-        state = PunchState(PunchPhase.unavailable,
-            shift: shift, message: _unavailableMessage(shift), biometricRequired: biometric);
+        state = PunchState(
+          PunchPhase.unavailable,
+          shift: shift,
+          message: _unavailableMessage(shift),
+          biometricRequired: biometric,
+        );
         return;
       }
       if (shift['office'] == null) {
-        state = PunchState(PunchPhase.unavailable,
-            shift: shift, message: 'No office is assigned to you yet. Contact HR.', biometricRequired: biometric);
+        state = PunchState(
+          PunchPhase.unavailable,
+          shift: shift,
+          message: 'No office is assigned to you yet. Contact HR.',
+          biometricRequired: biometric,
+        );
         return;
       }
-      state = PunchState(PunchPhase.checking, shift: shift, action: action, biometricRequired: biometric);
+      state = PunchState(
+        PunchPhase.checking,
+        shift: shift,
+        action: action,
+        biometricRequired: biometric,
+      );
 
       // This installation must hold the registered, still-valid device key.
       final device = (summary['device'] as Map?)?.cast<String, dynamic>();
       final status = await _deviceKey.status(_alias);
       final installation = await Installation.id();
-      final registeredHere = device != null && device['installation_id'] == installation;
-      if (!registeredHere || !status.keyUsable || (biometric && device['biometric_bound'] != true && status.keyBiometricBound == false)) {
-        state = PunchState(PunchPhase.needsDevice, shift: shift, action: action, biometricRequired: biometric,
-            message: !status.biometricReady && biometric ? _biometricMessage(status.biometric) : null);
+      final registeredHere =
+          device != null && device['installation_id'] == installation;
+      if (!registeredHere ||
+          !status.keyUsable ||
+          (biometric &&
+              device['biometric_bound'] != true &&
+              status.keyBiometricBound == false)) {
+        state = PunchState(
+          PunchPhase.needsDevice,
+          shift: shift,
+          action: action,
+          biometricRequired: biometric,
+          message: !status.biometricReady && biometric
+              ? _biometricMessage(status.biometric)
+              : null,
+        );
         return;
       }
       await _checkLocation();
     } on DeviceKeyException catch (e) {
       state = PunchState(PunchPhase.unavailable, message: e.message);
     } on ApiException catch (e) {
-      state = PunchState(PunchPhase.failure, message: e.message, retryable: true);
+      state = PunchState(
+        PunchPhase.failure,
+        message: e.message,
+        retryable: true,
+      );
     }
   }
 
   Future<void> _checkLocation({bool request = false}) async {
-    final access = request ? await _location.request() : await _location.check();
+    final access = request
+        ? await _location.request()
+        : await _location.check();
     switch (access) {
       case LocationAccess.granted:
         await acquire();
       case LocationAccess.approximateOnly:
         state = state.copy(phase: PunchPhase.approximateOnly);
       case LocationAccess.denied:
-        state = state.copy(phase: request ? PunchPhase.locationDenied : PunchPhase.locationPermission);
+        state = state.copy(
+          phase: request
+              ? PunchPhase.locationDenied
+              : PunchPhase.locationPermission,
+        );
       case LocationAccess.deniedForever:
         state = state.copy(phase: PunchPhase.locationDeniedForever);
       case LocationAccess.serviceOff:
@@ -156,12 +196,30 @@ class PunchController extends Notifier<PunchState> {
   /// Provisional reading for display only; the server decides.
   Future<void> acquire() async {
     state = state.copy(phase: PunchPhase.acquiring);
+    final wifi = _wifiInfo();
     try {
       final p = await _location.freshSample();
       final office = state.office!;
       final d = _location.distanceMeters(
-          p.latitude, p.longitude, (office['latitude'] as num).toDouble(), (office['longitude'] as num).toDouble());
-      state = state.copy(phase: PunchPhase.ready, sample: p, distance: d);
+        p.latitude,
+        p.longitude,
+        (office['latitude'] as num).toDouble(),
+        (office['longitude'] as num).toDouble(),
+      );
+      final wifiReading = await wifi;
+      final accepted = ((office['wifi_ssids'] as List?) ?? const [])
+          .whereType<String>()
+          .toList(growable: false);
+      state = state.copy(
+        phase: PunchPhase.ready,
+        sample: p,
+        distance: d,
+        wifiEvidence: classifyOfficeWifi(
+          accepted,
+          wifiReading.$1,
+          wifiReading.$2,
+        ),
+      );
     } catch (_) {
       state = state.copy(
         phase: PunchPhase.failure,
@@ -178,14 +236,22 @@ class PunchController extends Notifier<PunchState> {
     try {
       final status = await _deviceKey.status(_alias);
       if (prev.biometricRequired && !status.biometricReady) {
-        state = PunchState(PunchPhase.needsDevice, shift: prev.shift, action: prev.action,
-            biometricRequired: prev.biometricRequired, message: _biometricMessage(status.biometric));
+        state = PunchState(
+          PunchPhase.needsDevice,
+          shift: prev.shift,
+          action: prev.action,
+          biometricRequired: prev.biometricRequired,
+          message: _biometricMessage(status.biometric),
+        );
         return;
       }
       final challenge = (await _api.rpc('create_device_challenge')).map;
       final nonce = challenge['nonce'] as String;
-      final chain = await _deviceKey.generate(_alias, Uint8List.fromList(utf8.encode(nonce)),
-          requireBiometric: prev.biometricRequired);
+      final chain = await _deviceKey.generate(
+        _alias,
+        Uint8List.fromList(utf8.encode(nonce)),
+        requireBiometric: prev.biometricRequired,
+      );
       await _api.function('device-register', {
         'challenge_id': challenge['challenge_id'],
         'nonce': nonce,
@@ -196,11 +262,21 @@ class PunchController extends Notifier<PunchState> {
       });
       await load();
     } on DeviceKeyException catch (e) {
-      state = PunchState(PunchPhase.needsDevice, shift: prev.shift, action: prev.action,
-          biometricRequired: prev.biometricRequired, message: e.message);
+      state = PunchState(
+        PunchPhase.needsDevice,
+        shift: prev.shift,
+        action: prev.action,
+        biometricRequired: prev.biometricRequired,
+        message: e.message,
+      );
     } on ApiException catch (e) {
-      state = PunchState(PunchPhase.needsDevice, shift: prev.shift, action: prev.action,
-          biometricRequired: prev.biometricRequired, message: e.message);
+      state = PunchState(
+        PunchPhase.needsDevice,
+        shift: prev.shift,
+        action: prev.action,
+        biometricRequired: prev.biometricRequired,
+        message: e.message,
+      );
     }
   }
 
@@ -210,7 +286,8 @@ class PunchController extends Notifier<PunchState> {
     final s = state;
     final shift = s.shift!;
     final action = s.action!;
-    final targetId = (action == 'IN' ? shift['instance_id'] : shift['session_id']) as String;
+    final targetId =
+        (action == 'IN' ? shift['instance_id'] : shift['session_id']) as String;
     final summary = ref.read(homeSummaryProvider).value;
     final device = (summary?['device'] as Map?)?.cast<String, dynamic>();
     if (device == null) {
@@ -223,22 +300,32 @@ class PunchController extends Notifier<PunchState> {
     final wifi = _wifiInfo();
     try {
       await SecureSessionStorage.storage.write(
-          key: _pendingKey, value: jsonEncode({'key': operationKey, 'action': action, 'employee': _session.employeeId}));
+        key: _pendingKey,
+        value: jsonEncode({
+          'key': operationKey,
+          'action': action,
+          'employee': _session.employeeId,
+        }),
+      );
 
       final challenge = (await _api.rpc('create_punch_challenge', {
         'p_action': action,
         'p_target_id': targetId,
         'p_device_id': device['device_id'],
-      }))
-          .map;
-      final serverNow = DateTime.parse(challenge['server_time'] as String).toUtc();
-      final skewMs = serverNow.millisecondsSinceEpoch - DateTime.now().toUtc().millisecondsSinceEpoch;
+      })).map;
+      final serverNow = DateTime.parse(challenge['server_time'] as String)
+          .toUtc();
+      final skewMs =
+          serverNow.millisecondsSinceEpoch -
+          DateTime.now().toUtc().millisecondsSinceEpoch;
 
       // Fingerprint first, then a fresh reading: time at the prompt never
       // makes the location stale (server allows only a few seconds).
-      await _deviceKey.authorize(_alias,
-          title: action == 'IN' ? 'Confirm check-in' : 'Confirm check-out',
-          subtitle: 'Use your fingerprint or face to verify it is you');
+      await _deviceKey.authorize(
+        _alias,
+        title: action == 'IN' ? 'Confirm check-in' : 'Confirm check-out',
+        subtitle: 'Use your fingerprint or face to verify it is you',
+      );
       final sample = await _location.freshSample();
       final sampleMs = sample.timestamp.toUtc().millisecondsSinceEpoch + skewMs;
       final payload = PunchPayload(
@@ -252,13 +339,24 @@ class PunchController extends Notifier<PunchState> {
         officeId: (shift['office'] as Map)['id'] as String,
         latitude: PunchPayload.lat(sample.latitude),
         longitude: PunchPayload.lng(sample.longitude),
-        accuracy: PunchPayload.acc(sample.accuracy.clamp(0, 9999.99).toDouble()),
+        accuracy: PunchPayload.acc(
+          sample.accuracy.clamp(0, 9999.99).toDouble(),
+        ),
         sampleAtMs: sampleMs.toString(),
       );
-      final signature = await _deviceKey.signAuthorized(Uint8List.fromList(payload.bytes));
+      final signature = await _deviceKey.signAuthorized(
+        Uint8List.fromList(payload.bytes),
+      );
 
       final res = await _api.function(
-          'punch', payload.toRequest(signature, isMocked: sample.isMocked, wifiSsid: (await wifi).$1, wifiNearby: (await wifi).$2));
+        'punch',
+        payload.toRequest(
+          signature,
+          isMocked: sample.isMocked,
+          wifiSsid: (await wifi).$1,
+          wifiNearby: (await wifi).$2,
+        ),
+      );
       await _finish(res.map);
     } on DeviceKeyException catch (e) {
       await _clearPending();
@@ -271,19 +369,28 @@ class PunchController extends Notifier<PunchState> {
         // The commit may have happened: recover by operation key first.
         final recovered = await reconcilePending();
         if (!recovered) {
-          state = s.copy(phase: PunchPhase.failure, message: e.message, retryable: true);
+          state = s.copy(
+            phase: PunchPhase.failure,
+            message: e.message,
+            retryable: true,
+          );
         }
       } else {
         await _clearPending();
-        state = s.copy(phase: PunchPhase.failure, message: e.message, retryable: e.retryable || _retryableCode(e.code));
+        state = s.copy(
+          phase: PunchPhase.failure,
+          message: e.message,
+          retryable: e.retryable || _retryableCode(e.code),
+        );
       }
     } catch (_) {
       await _clearPending();
       await _deviceKey.clearAuthorized();
       state = s.copy(
-          phase: PunchPhase.failure,
-          message: 'Could not get a fresh precise location. Move to a spot with better signal and retry.',
-          retryable: true);
+        phase: PunchPhase.failure,
+        message: 'Could not get a fresh precise location. Move to a spot with better signal and retry.',
+        retryable: true,
+      );
     }
   }
 
@@ -291,7 +398,10 @@ class PunchController extends Notifier<PunchState> {
     await _clearPending();
     if (res['ok'] == true) {
       ref.invalidate(homeSummaryProvider);
-      state = state.copy(phase: PunchPhase.success, result: (res['data'] as Map).cast<String, dynamic>());
+      state = state.copy(
+        phase: PunchPhase.success,
+        result: (res['data'] as Map).cast<String, dynamic>(),
+      );
     } else {
       final err = (res['error'] as Map?)?.cast<String, dynamic>() ?? const {};
       state = state.copy(
@@ -313,12 +423,17 @@ class PunchController extends Notifier<PunchState> {
       return false;
     }
     try {
-      final res = (await _api.rpc('get_punch_operation', {'p_operation_key': pending['key']})).map;
+      final res = (await _api.rpc('get_punch_operation', {
+        'p_operation_key': pending['key'],
+      })).map;
       await _clearPending();
       if (res['found'] == true) {
         final result = (res['result'] as Map).cast<String, dynamic>();
         ref.invalidate(homeSummaryProvider);
-        state = state.copy(phase: PunchPhase.success, result: (result['data'] as Map).cast<String, dynamic>());
+        state = state.copy(
+          phase: PunchPhase.success,
+          result: (result['data'] as Map).cast<String, dynamic>(),
+        );
         return true;
       }
     } on ApiException catch (e) {
@@ -334,8 +449,12 @@ class PunchController extends Notifier<PunchState> {
   static Future<(String?, List<String>)> _wifiInfo() async {
     String? connected;
     try {
-      final name = (await NetworkInfo().getWifiName())?.replaceAll('"', '').trim();
-      connected = name == null || name.isEmpty || name == '<unknown ssid>' ? null : name;
+      final name = (await NetworkInfo().getWifiName())
+          ?.replaceAll('"', '')
+          .trim();
+      connected = name == null || name.isEmpty || name == '<unknown ssid>'
+          ? null
+          : name;
     } catch (_) {}
     final nearby = <String>{};
     try {
@@ -355,10 +474,17 @@ class PunchController extends Notifier<PunchState> {
     return (connected, nearby.toList());
   }
 
-  Future<void> _clearPending() => SecureSessionStorage.storage.delete(key: _pendingKey);
+  Future<void> _clearPending() =>
+      SecureSessionStorage.storage.delete(key: _pendingKey);
 
-  static bool _retryableCode(String code) =>
-      const {'OUTSIDE_ZONE', 'WIFI_REQUIRED', 'LOCATION_INACCURATE', 'LOCATION_STALE', 'VERIFICATION_FAILED', 'RATE_LIMITED'}.contains(code);
+  static bool _retryableCode(String code) => const {
+    'OUTSIDE_ZONE',
+    'WIFI_REQUIRED',
+    'LOCATION_INACCURATE',
+    'LOCATION_STALE',
+    'VERIFICATION_FAILED',
+    'RATE_LIMITED',
+  }.contains(code);
 
   static String _unavailableMessage(Map<String, dynamic>? shift) {
     if (shift == null) return 'No shift is scheduled for you today.';
@@ -378,11 +504,15 @@ class PunchController extends Notifier<PunchState> {
   }
 
   static String _biometricMessage(String biometric) => switch (biometric) {
-        'none_enrolled' => 'Set up fingerprint or face unlock in your phone settings, then come back.',
-        'no_hardware' => 'This phone has no fingerprint or face sensor. Ask your Admin about punching options.',
-        'update_required' => 'Install the latest security update on this phone, then try again.',
-        _ => 'Fingerprint/face verification is not available on this phone right now.',
-      };
+    'none_enrolled' => 'Set up fingerprint or face unlock in your phone settings, then come back.',
+    'no_hardware' => 'This phone has no fingerprint or face sensor. Ask your Admin about punching options.',
+    'update_required' =>
+      'Install the latest security update on this phone, then try again.',
+    _ =>
+      'Fingerprint/face verification is not available on this phone right now.',
+  };
 }
 
-final punchProvider = NotifierProvider.autoDispose<PunchController, PunchState>(PunchController.new);
+final punchProvider = NotifierProvider.autoDispose<PunchController, PunchState>(
+  PunchController.new,
+);
