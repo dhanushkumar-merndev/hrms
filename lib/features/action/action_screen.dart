@@ -283,7 +283,7 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
                   AppSpacing.page,
                   AppSpacing.lg,
                   AppSpacing.page,
-                  AppSpacing.lg,
+                  AppSpacing.xl,
                 ),
                 child: _CompactCategoryBar(
                   options: [for (final scope in scopes) (scope.$2, scope.$3)],

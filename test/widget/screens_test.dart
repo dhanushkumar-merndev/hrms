@@ -352,13 +352,13 @@ void main() {
     );
     final scopeCardInsets = scopeCardSpacing.padding.resolve(TextDirection.ltr);
     expect(scopeCardInsets.top, greaterThanOrEqualTo(AppSpacing.lg));
-    expect(scopeCardInsets.bottom, greaterThanOrEqualTo(AppSpacing.lg));
+    expect(scopeCardInsets.bottom, AppSpacing.xl);
     final actionList = tester.widget<ListView>(
       find.byKey(const Key('action-list')),
     );
     expect(
       actionList.padding?.resolve(TextDirection.ltr).top,
-      greaterThanOrEqualTo(AppSpacing.xl),
+      scopeCardInsets.bottom,
     );
     expect(find.text('My attendance'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('My requests'), 400);
