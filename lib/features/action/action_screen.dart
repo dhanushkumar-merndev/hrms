@@ -370,6 +370,20 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
+const _tabCardShadow = [
+  BoxShadow(
+    color: Color(0x1C263342),
+    blurRadius: 14,
+    offset: Offset(0, 4),
+    spreadRadius: -1,
+  ),
+  BoxShadow(
+    color: Color(0x0D263342),
+    blurRadius: 6,
+    offset: Offset(0, 1),
+  ),
+];
+
 class _CompactCategoryBar extends StatelessWidget {
   const _CompactCategoryBar({
     required this.options,
@@ -394,21 +408,25 @@ class _CompactCategoryBar extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.border),
+        boxShadow: _tabCardShadow,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: JellyNavigationBar(
-        height: 72,
-        showTopBorder: false,
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onSelected,
-        destinations: [
-          for (final option in options)
-            JellyNavDestination(
-              icon: AppIcon(option.$2, size: 22),
-              selectedIcon: AppIcon(option.$2, size: 22),
-              label: option.$1,
-            ),
-        ],
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: JellyNavigationBar(
+          height: 72,
+          backgroundColor: Colors.transparent,
+          showTopBorder: false,
+          selectedIndex: selectedIndex,
+          onDestinationSelected: onSelected,
+          destinations: [
+            for (final option in options)
+              JellyNavDestination(
+                icon: AppIcon(option.$2, size: 22),
+                selectedIcon: AppIcon(option.$2, size: 22),
+                label: option.$1,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -435,6 +453,7 @@ class _SingleCategoryTab extends StatelessWidget {
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.border),
+            boxShadow: _tabCardShadow,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
