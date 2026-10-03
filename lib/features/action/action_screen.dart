@@ -294,7 +294,11 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
               ),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.page),
-                child: Divider(),
+                child: Divider(
+                  key: Key('action-scope-divider'),
+                  height: 1,
+                  thickness: 1,
+                ),
               ),
             ],
             Expanded(

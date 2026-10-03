@@ -395,6 +395,11 @@ void main() {
     final scopeCardInsets = scopeCardSpacing.padding.resolve(TextDirection.ltr);
     expect(scopeCardInsets.top, AppSpacing.xl);
     expect(scopeCardInsets.bottom, AppSpacing.md);
+    final scopeDivider = tester.widget<Divider>(
+      find.byKey(const Key('action-scope-divider')),
+    );
+    expect(scopeDivider.height, 1);
+    expect(scopeDivider.thickness, 1);
     final actionList = tester.widget<ListView>(
       find.byKey(const Key('action-list')),
     );
