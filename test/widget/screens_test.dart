@@ -351,7 +351,7 @@ void main() {
       find.byKey(const Key('action-scope-card-spacing')),
     );
     final scopeCardInsets = scopeCardSpacing.padding.resolve(TextDirection.ltr);
-    expect(scopeCardInsets.top, greaterThanOrEqualTo(AppSpacing.lg));
+    expect(scopeCardInsets.top, AppSpacing.xl);
     expect(scopeCardInsets.bottom, AppSpacing.xl);
     final actionList = tester.widget<ListView>(
       find.byKey(const Key('action-list')),

@@ -281,7 +281,7 @@ class _ActionScreenState extends ConsumerState<ActionScreen> {
                 key: const Key('action-scope-card-spacing'),
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.page,
-                  AppSpacing.lg,
+                  AppSpacing.xl,
                   AppSpacing.page,
                   AppSpacing.xl,
                 ),
