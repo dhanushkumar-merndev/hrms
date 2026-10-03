@@ -79,7 +79,7 @@ if [[ "$MODE" == "all" || "$MODE" == "--functions-only" ]]; then
   rm -f "$SECRETS"
 
   echo "== Deploying Edge Functions"
-  for fn in auth-login auth-password auth-reauth admin-users device-register punch files maintenance archive \
+  for fn in auth-login auth-password auth-reauth admin-users device-register punch files maintenance archive public-config \
             holiday-suggestions sheets-sync; do
     "${SB[@]}" functions deploy "$fn" --project-ref "$SUPABASE_PROJECT_REF" --no-verify-jwt --use-api 2>&1 | redact | tail -1
   done

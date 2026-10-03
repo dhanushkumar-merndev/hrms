@@ -51,4 +51,41 @@ select test.eq((select count(*)::integer from pg_proc p join pg_namespace n on n
                 where n.nspname = 'public' and has_function_privilege('anon', p.oid, 'execute')
                   and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype = 'e')), 0,
   'anon executes no public function');
+
+-- SUPPORT-001..004: Admin-configured public login support is narrow and rate limited.
+select test.login('EMP01');
+select test.throws($$select public.update_org_settings('{"support_phone":"+91 98765 43210"}'::jsonb, 1)$$,
+  'ACCESS_DENIED', 'SUPPORT-001 only Admin can change the HR support phone');
+select test.throws($$select public.internal_login_support('TEST_ORG', 'member-ip')$$,
+  '42501', 'SUPPORT-002 authenticated clients cannot call internal login support');
+
+select test.login('ADMIN01');
+create temporary table support_saved as
+select public.update_org_settings('{"support_phone":"+91 98765 43210"}'::jsonb,
+  (public.get_org_settings() ->> 'version')::integer) as res;
+select test.eq((select res -> 'data' ->> 'support_phone' from support_saved), '+91 98765 43210',
+  'SUPPORT-001 Admin saves the normalized display phone');
+select test.throws($$select public.update_org_settings('{"support_phone":"javascript:alert(1)"}'::jsonb,
+  (public.get_org_settings() ->> 'version')::integer)$$, 'VALIDATION_FAILED',
+  'SUPPORT-001 arbitrary text and URI injection are rejected');
+
+select test.as_admin_db();
+create temporary table support_public as
+select public.internal_login_support('test_org', 'support-ip') as res;
+select test.eq((select res ->> 'display_phone' from support_public), '+91 98765 43210',
+  'SUPPORT-002 lookup is case-insensitive and returns display phone');
+select test.eq((select res ->> 'tel_uri' from support_public), 'tel:+919876543210',
+  'SUPPORT-002 lookup returns a normalized telephone URI');
+select test.eq((select array_agg(k order by k) from support_public, lateral jsonb_object_keys(res) k),
+  array['allowed','display_phone','tel_uri']::text[], 'SUPPORT-002 internal projection contains no organisation or employee identity');
+select test.eq((public.internal_login_support('UNKNOWN', 'unknown-ip') ->> 'display_phone')::text, null::text,
+  'SUPPORT-003 an unknown organisation exposes no phone');
+
+update hrms.organizations set support_phone = null where code = 'TEST_ORG';
+select test.eq((public.internal_login_support('TEST_ORG', 'missing-ip') ->> 'display_phone')::text, null::text,
+  'SUPPORT-003 missing configuration returns no phone');
+
+select public.internal_login_support('UNKNOWN', 'limited-ip') from generate_series(1, 30);
+select test.eq((public.internal_login_support('UNKNOWN', 'limited-ip') ->> 'allowed')::boolean, false,
+  'SUPPORT-004 repeated signed-out lookup is rate limited');
 rollback;

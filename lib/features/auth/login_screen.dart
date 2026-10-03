@@ -7,6 +7,7 @@ import '../../core/api/api_exception.dart';
 import '../../core/auth/session_controller.dart';
 import '../../core/widgets/app_icon.dart';
 import '../../core/widgets/illustration.dart';
+import 'support_phone.dart';
 
 /// S01 — Employee ID + password. No signup, OTP or email recovery.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -40,7 +41,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       // The ID is normalised server-side too (trim + uppercase); the password
       // is sent exactly as typed — intentional spaces are preserved.
-      await ref.read(sessionProvider.notifier).login(_code.text.trim().toUpperCase(), _password.text);
+      await ref
+          .read(sessionProvider.notifier)
+          .login(_code.text.trim().toUpperCase(), _password.text);
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     } catch (_) {
@@ -63,71 +66,110 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 440),
               child: Form(
                 key: _form,
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  const Center(child: Illustration('attendance', size: 110)),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text('Welcome', style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text('Sign in with your employee ID', style: Theme.of(context).textTheme.bodyMedium,
-                      textAlign: TextAlign.center),
-                  const SizedBox(height: AppSpacing.xl),
-                  if (message != null && _error == null) ...[
-                    _Banner(message, tone: AppColors.warning, background: AppColors.warningSoft),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Center(child: Illustration('attendance', size: 110)),
                     const SizedBox(height: AppSpacing.lg),
-                  ],
-                  TextFormField(
-                    controller: _code,
-                    textCapitalization: TextCapitalization.characters,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    textInputAction: TextInputAction.next,
-                    autofillHints: const [AutofillHints.username],
-                    inputFormatters: [LengthLimitingTextInputFormatter(32)],
-                    decoration: const InputDecoration(labelText: 'Employee ID', hintText: 'e.g. EMP001',
-                        prefixIcon: Padding(padding: EdgeInsets.all(14), child: AppIcon(Icons.badge_outlined, size: 20))),
-                    validator: (v) {
-                      final code = (v ?? '').trim().toUpperCase();
-                      if (code.isEmpty) return 'Enter your employee ID';
-                      if (!RegExp(r'^[A-Z0-9-]{3,32}$').hasMatch(code)) return 'Use letters, digits or -';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  TextFormField(
-                    controller: _password,
-                    obscureText: _obscure,
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    autofillHints: const [AutofillHints.password],
-                    keyboardType: TextInputType.visiblePassword,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _busy ? null : _submit(),
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: const Padding(padding: EdgeInsets.all(14), child: AppIcon(Icons.lock_outline_rounded, size: 20)),
-                      suffixIcon: IconButton(
-                        tooltip: _obscure ? 'Show password' : 'Hide password',
-                        icon: AppIcon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                        onPressed: () => setState(() => _obscure = !_obscure),
-                      ),
+                    Text(
+                      'Welcome',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                      textAlign: TextAlign.center,
                     ),
-                    validator: (v) => (v ?? '').isEmpty ? 'Enter your password' : null,
-                  ),
-                  if (_error != null) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Sign in with your employee ID',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    if (message != null && _error == null) ...[
+                      _Banner(
+                        message,
+                        tone: AppColors.warning,
+                        background: AppColors.warningSoft,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                    TextFormField(
+                      controller: _code,
+                      textCapitalization: TextCapitalization.characters,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.username],
+                      inputFormatters: [LengthLimitingTextInputFormatter(32)],
+                      decoration: const InputDecoration(
+                        labelText: 'Employee ID',
+                        hintText: 'e.g. EMP001',
+                        prefixIcon: Padding(
+                          padding: EdgeInsets.all(14),
+                          child: AppIcon(Icons.badge_outlined, size: 20),
+                        ),
+                      ),
+                      validator: (v) {
+                        final code = (v ?? '').trim().toUpperCase();
+                        if (code.isEmpty) return 'Enter your employee ID';
+                        if (!RegExp(r'^[A-Z0-9-]{3,32}$').hasMatch(code)) {
+                          return 'Use letters, digits or -';
+                        }
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: AppSpacing.lg),
-                    _Banner(_error!, tone: AppColors.error, background: AppColors.errorSoft),
+                    TextFormField(
+                      controller: _password,
+                      obscureText: _obscure,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      autofillHints: const [AutofillHints.password],
+                      keyboardType: TextInputType.visiblePassword,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _busy ? null : _submit(),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.all(14),
+                          child: AppIcon(Icons.lock_outline_rounded, size: 20),
+                        ),
+                        suffixIcon: IconButton(
+                          tooltip: _obscure ? 'Show password' : 'Hide password',
+                          icon: AppIcon(
+                            _obscure
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                          onPressed: () => setState(() => _obscure = !_obscure),
+                        ),
+                      ),
+                      validator: (v) =>
+                          (v ?? '').isEmpty ? 'Enter your password' : null,
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      _Banner(
+                        _error!,
+                        tone: AppColors.error,
+                        background: AppColors.errorSoft,
+                      ),
+                    ],
+                    const SizedBox(height: AppSpacing.xl),
+                    FilledButton(
+                      onPressed: _busy ? null : _submit,
+                      child: _busy
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.4,
+                              ),
+                            )
+                          : const Text('Sign in'),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    const ForgotPasswordSupport(),
                   ],
-                  const SizedBox(height: AppSpacing.xl),
-                  FilledButton(
-                    onPressed: _busy ? null : _submit,
-                    child: _busy
-                        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4))
-                        : const Text('Sign in'),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text('Forgot your password? Contact HR to reset it.',
-                      style: Theme.of(context).textTheme.bodyMedium, textAlign: TextAlign.center),
-                ]),
+                ),
               ),
             ),
           ),
@@ -149,12 +191,19 @@ class _Banner extends StatelessWidget {
       liveRegion: true,
       child: Container(
         padding: const EdgeInsets.all(AppSpacing.md),
-        decoration: BoxDecoration(color: background, borderRadius: BorderRadius.circular(12)),
-        child: Row(children: [
-          AppIcon(Icons.info_outline_rounded, color: tone, size: 20),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(text, style: TextStyle(color: tone, fontSize: 15))),
-        ]),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            AppIcon(Icons.info_outline_rounded, color: tone, size: 20),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(text, style: TextStyle(color: tone, fontSize: 15)),
+            ),
+          ],
+        ),
       ),
     );
   }
